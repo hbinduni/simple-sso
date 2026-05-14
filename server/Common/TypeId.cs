@@ -34,16 +34,16 @@ public static class TypeId
     private static string EncodeBase32(ReadOnlySpan<byte> b)
     {
         Span<char> c = stackalloc char[26];
-        c[0]  = Alphabet[(b[0] & 0xE0) >> 5];
-        c[1]  = Alphabet[b[0] & 0x1F];
-        c[2]  = Alphabet[(b[1] & 0xF8) >> 3];
-        c[3]  = Alphabet[((b[1] & 0x07) << 2) | ((b[2] & 0xC0) >> 6)];
-        c[4]  = Alphabet[(b[2] & 0x3E) >> 1];
-        c[5]  = Alphabet[((b[2] & 0x01) << 4) | ((b[3] & 0xF0) >> 4)];
-        c[6]  = Alphabet[((b[3] & 0x0F) << 1) | ((b[4] & 0x80) >> 7)];
-        c[7]  = Alphabet[(b[4] & 0x7C) >> 2];
-        c[8]  = Alphabet[((b[4] & 0x03) << 3) | ((b[5] & 0xE0) >> 5)];
-        c[9]  = Alphabet[b[5] & 0x1F];
+        c[0] = Alphabet[(b[0] & 0xE0) >> 5];
+        c[1] = Alphabet[b[0] & 0x1F];
+        c[2] = Alphabet[(b[1] & 0xF8) >> 3];
+        c[3] = Alphabet[((b[1] & 0x07) << 2) | ((b[2] & 0xC0) >> 6)];
+        c[4] = Alphabet[(b[2] & 0x3E) >> 1];
+        c[5] = Alphabet[((b[2] & 0x01) << 4) | ((b[3] & 0xF0) >> 4)];
+        c[6] = Alphabet[((b[3] & 0x0F) << 1) | ((b[4] & 0x80) >> 7)];
+        c[7] = Alphabet[(b[4] & 0x7C) >> 2];
+        c[8] = Alphabet[((b[4] & 0x03) << 3) | ((b[5] & 0xE0) >> 5)];
+        c[9] = Alphabet[b[5] & 0x1F];
         c[10] = Alphabet[(b[6] & 0xF8) >> 3];
         c[11] = Alphabet[((b[6] & 0x07) << 2) | ((b[7] & 0xC0) >> 6)];
         c[12] = Alphabet[(b[7] & 0x3E) >> 1];
