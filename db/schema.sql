@@ -7,8 +7,8 @@
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS users (
-  -- TypeID format: user_xxx... (max ~30 chars)
-  id VARCHAR(30) PRIMARY KEY,
+  -- TypeID format: user_xxx... (max ~32 chars)
+  id VARCHAR(32) PRIMARY KEY,
 
   -- Authentication
   email VARCHAR(255) UNIQUE NOT NULL,
@@ -35,8 +35,8 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS oauth_accounts (
   -- TypeID format: oauth_xxx...
-  id VARCHAR(30) PRIMARY KEY,
-  user_id VARCHAR(30) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  id VARCHAR(32) PRIMARY KEY,
+  user_id VARCHAR(32) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 
   -- Provider info
   provider VARCHAR(20) NOT NULL CHECK (provider IN ('google', 'facebook', 'twitter')),
@@ -62,8 +62,8 @@ CREATE TABLE IF NOT EXISTS oauth_accounts (
 
 CREATE TABLE IF NOT EXISTS sessions (
   -- TypeID format: sess_xxx...
-  id VARCHAR(30) PRIMARY KEY,
-  user_id VARCHAR(30) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  id VARCHAR(32) PRIMARY KEY,
+  user_id VARCHAR(32) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 
   -- Session metadata
   user_agent TEXT,
@@ -82,8 +82,8 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE TABLE IF NOT EXISTS items (
   -- TypeID format: item_xxx...
-  id VARCHAR(30) PRIMARY KEY,
-  user_id VARCHAR(30) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  id VARCHAR(32) PRIMARY KEY,
+  user_id VARCHAR(32) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 
   -- Content
   title VARCHAR(255) NOT NULL,
