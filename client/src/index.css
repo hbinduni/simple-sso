@@ -13,13 +13,13 @@
   --color-accent-500: #06b6d4;
   --color-accent-600: #0891b2;
 
-  --color-go: #00add8;
+  --color-dotnet: #512bd4;
+  --color-aspnet: #7c3aed;
   --color-react: #61dafb;
   --color-vite: #bd34fe;
   --color-tailwind: #38bdf8;
   --color-postgres: #336791;
   --color-docker: #2496ed;
-  --color-fiber: #00acd7;
   --color-tsgo: #3178c6;
 }
 

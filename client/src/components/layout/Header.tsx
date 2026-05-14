@@ -4,12 +4,12 @@ export function Header() {
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="size-7 rounded-md bg-accent-500/20 flex items-center justify-center">
-            <span className="text-accent-400 font-mono text-sm font-semibold">G</span>
+            <span className="text-accent-400 font-mono text-xs font-semibold">.N</span>
           </div>
-          <span className="font-display font-semibold text-white/90 text-sm tracking-tight">go-fiber-react</span>
+          <span className="font-display font-semibold text-white/90 text-sm tracking-tight">dotnet-react</span>
         </div>
         <a
-          href="https://github.com/hbinduni/bun-golang-react-monorepo"
+          href="https://github.com/hbinduni/bun-dotnet-react-monorepo"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 text-xs text-white/40 hover:text-white/70 transition-colors font-mono"

@@ -5,8 +5,8 @@ import {formatDate} from '@client/utils'
 import {useCallback, useEffect, useState} from 'react'
 
 const techStack = [
-  {name: 'Go', color: 'var(--color-go)', icon: 'Go'},
-  {name: 'Fiber', color: 'var(--color-fiber)', icon: 'F'},
+  {name: '.NET 10', color: 'var(--color-dotnet)', icon: '.NET'},
+  {name: 'ASP.NET Core', color: 'var(--color-aspnet)', icon: 'API'},
   {name: 'React 19', color: 'var(--color-react)', icon: 'R'},
   {name: 'Vite 7', color: 'var(--color-vite)', icon: 'V'},
   {name: 'Tailwind 4', color: 'var(--color-tailwind)', icon: 'T'},
@@ -68,7 +68,7 @@ export function Home() {
             className="animate-fade-up text-4xl sm:text-5xl md:text-6xl font-display font-bold tracking-tight leading-[1.1] mb-6"
             style={{animationDelay: '0.15s'}}
           >
-            <span className="text-gradient">Go + Fiber</span>
+            <span className="text-gradient">.NET API</span>
             <br />
             <span className="text-white/90">meets React</span>
           </h1>
@@ -76,8 +76,8 @@ export function Home() {
             className="animate-fade-up max-w-xl mx-auto text-sm sm:text-base text-white/40 leading-relaxed font-light mb-10"
             style={{animationDelay: '0.25s'}}
           >
-            A full-stack monorepo with a Go/Fiber API, React 19 SPA, Tailwind CSS 4, native TypeScript via tsgo, and
-            one-command Docker/K8s deployment.
+            A full-stack monorepo with an ASP.NET Core API, React 19 SPA, Tailwind CSS 4, native TypeScript via tsgo,
+            and one-command Docker/K8s deployment.
           </p>
 
           {/* API status pill */}

@@ -1,9 +1,9 @@
-# Go + Fiber + React Monorepo Template
+# .NET + React Monorepo Template
 
-A modern full-stack monorepo template with **Go/Fiber** backend, **React** frontend, **PostgreSQL** database, and **Docker/Kubernetes** deployment.
+A modern full-stack monorepo template with **ASP.NET Core** backend, **React** frontend, **PostgreSQL** database, and **Docker/Kubernetes** deployment.
 
-[![Go](https://img.shields.io/badge/Go-1.25-00ADD8)](https://go.dev)
-[![Fiber](https://img.shields.io/badge/Fiber-v3-00ACD7)](https://gofiber.io)
+[![.NET](https://img.shields.io/badge/.NET-10-512BD4)](https://dotnet.microsoft.com)
+[![ASP.NET Core](https://img.shields.io/badge/ASP.NET%20Core-10-512BD4)](https://learn.microsoft.com/aspnet/core)
 [![React](https://img.shields.io/badge/React-19-blue)](https://react.dev)
 [![Vite](https://img.shields.io/badge/Vite-7-purple)](https://vite.dev)
 [![tsgo](https://img.shields.io/badge/tsgo-7.0--preview-blue)](https://github.com/microsoft/typescript-go)
@@ -11,18 +11,18 @@ A modern full-stack monorepo template with **Go/Fiber** backend, **React** front
 
 ## 🎯 What is This?
 
-A **production-ready monorepo template** for building full-stack applications with a Go backend and React frontend. Clone it, customize it, and start building your project in minutes.
+A **production-ready monorepo template** for building full-stack applications with a .NET backend and React frontend. Clone it, customize it, and start building your project in minutes.
 
 ## ✨ Features
 
-- ✅ **Modern Stack**: Go/Fiber + React 19 + Vite 7 + Tailwind CSS 4
-- ✅ **Fast Backend**: Compiled Go binary with excellent performance
+- ✅ **Modern Stack**: ASP.NET Core + React 19 + Vite 7 + Tailwind CSS 4
+- ✅ **Production Backend**: .NET 10 minimal API with JWT auth, Dapper, and Npgsql
 - ✅ **Fast Type-Checking**: tsgo (TypeScript 7 native compiler) — ~10x faster than tsc
 - ✅ **Authentication**: JWT tokens with access/refresh pattern, session tracking
-- ✅ **Type Safety**: TypeScript strict mode frontend, compile-time Go backend
+- ✅ **Type Safety**: TypeScript strict mode frontend, nullable-enabled C# backend
 - ✅ **TypeID**: K-sortable, type-safe identifiers (`user_`, `item_`, `sess_`)
 - ✅ **Database**: PostgreSQL 16 with schema, triggers, and seed scripts
-- ✅ **Small Images**: 20MB server Docker image
+- ✅ **Lean Images**: Multi-stage .NET server image and Nginx client image
 - ✅ **Docker**: Production-ready multi-stage builds
 - ✅ **Kubernetes**: Complete K8s deployment with 40+ Makefile commands
 - ✅ **Runtime Config**: Change API URL without rebuilding the client image
@@ -32,18 +32,18 @@ A **production-ready monorepo template** for building full-stack applications wi
 
 ```
 monorepo/
-├── server/              # Go/Fiber backend
-│   ├── main.go         # Server entry point
-│   ├── config/         # Configuration
-│   ├── database/       # DB connection & queries
-│   ├── handlers/       # Request handlers (auth, items)
-│   ├── middleware/     # JWT auth middleware
-│   ├── models/         # Data models & response types
-│   ├── routes/         # Route setup
-│   ├── utils/          # Utilities (JWT, TypeID, validation)
-│   ├── go.mod          # Go dependencies
+├── server/              # ASP.NET Core backend
+│   ├── Program.cs      # Server entry point, DI, middleware, endpoint mapping
+│   ├── Auth/           # JWT and password services
+│   ├── Common/         # TypeID, validation, and request utilities
+│   ├── Configuration/  # App configuration
+│   ├── Data/           # PostgreSQL connection and repositories
+│   ├── Endpoints/      # Minimal API endpoint groups
+│   ├── Models/         # Data models and request/response types
+│   ├── Server.csproj   # .NET project file
+│   ├── Version.cs      # Server application version
 │   ├── .env.example
-│   └── Dockerfile      # Multi-stage build (20MB)
+│   └── Dockerfile      # Multi-stage .NET build
 ├── client/              # React + Vite frontend
 │   ├── src/
 │   │   ├── components/ # Reusable UI & layout components
@@ -69,7 +69,7 @@ monorepo/
 
 ### Architecture
 
-- **server/**: Go/Fiber REST API with JWT auth, compiled to a single binary
+- **server/**: ASP.NET Core REST API with JWT auth, repositories, and PostgreSQL access
 - **client/**: React 19 + Vite 7 frontend with TypeScript, type-checked by tsgo
 - **db/**: PostgreSQL schema with TypeID support, triggers, and session cleanup
 
@@ -77,7 +77,7 @@ monorepo/
 
 ### Prerequisites
 
-- [Go](https://go.dev) >= 1.25
+- [.NET SDK](https://dotnet.microsoft.com/download) >= 10.0
 - [Bun](https://bun.sh) >= 1.3.0 (for client)
 - [Docker](https://docker.com) (for production deployment)
 - PostgreSQL 16 (for local development)
@@ -87,7 +87,7 @@ monorepo/
 ```bash
 # Clone the repository
 git clone <your-repo-url>
-cd bun-golang-react-monorepo
+cd bun-dotnet-react-monorepo
 
 # Install client dependencies
 bun install
@@ -105,12 +105,12 @@ bun run db:seed    # Add sample data
 
 ```bash
 # Run both server and client concurrently
-bun dev
+make dev
 
 # Or run individually:
-bun run dev:server   # Go server on http://localhost:3000
-bun run dev:client   # React client on http://localhost:5173
-                     # API requests proxied to server automatically
+make dev-server      # .NET server on http://localhost:3000
+make dev-client      # React client on http://localhost:5173
+                     # API requests are proxied to the server automatically
 ```
 
 ## 🔧 Development Workflows
@@ -122,12 +122,12 @@ bun run dev:client   # React client on http://localhost:5173
 bun run build
 
 # Build specific parts
-bun run build:server  # Outputs to server/bin/server
+make build-server     # Publishes .NET server to server/bin/
 bun run build:client  # Type-checks with tsgo, then builds to client/dist/
 
 # Or use Makefile
 make build            # Builds both
-make build-server     # Go binary only
+make build-server     # .NET server only
 make build-client     # React only
 ```
 
@@ -144,7 +144,7 @@ bun run typecheck:safe
 ### Quality Checks
 
 ```bash
-# Go: format + vet
+# .NET: format + Release build
 make check-server
 
 # Client: biome check (lint + format)
@@ -224,10 +224,11 @@ import { Button } from '@client/components/ui'
 ## 🛠️ Tech Stack
 
 ### Backend
-- **Go 1.25**: Server language
-- **Fiber v3**: Web framework
-- **pgx v5**: PostgreSQL driver
-- **golang-jwt v5**: JWT authentication
+- **.NET 10**: Server runtime and SDK
+- **ASP.NET Core Minimal APIs**: HTTP routing and middleware
+- **Dapper**: Lightweight data access
+- **Npgsql**: PostgreSQL driver
+- **Microsoft.AspNetCore.Authentication.JwtBearer**: JWT authentication
 - **TypeID**: K-sortable type-safe identifiers
 
 ### Frontend
@@ -242,11 +243,11 @@ import { Button } from '@client/components/ui'
 ### Tooling
 - **Bun 1.3.0**: Package manager and test runner
 - **Biome**: Linter and formatter with Tailwind class sorting
-- **golangci-lint**: Go linting
+- **dotnet format**: C# formatting and style checks
 - **Concurrently**: Parallel dev servers
 
 ### DevOps
-- **Docker**: Multi-stage builds (Go → Alpine, Bun → Nginx)
+- **Docker**: Multi-stage builds (.NET SDK → ASP.NET runtime, Bun → Nginx)
 - **Nginx**: Production web server for client
 - **Kubernetes**: Full K8s manifests with Makefile automation
 

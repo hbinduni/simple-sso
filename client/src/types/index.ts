@@ -1,4 +1,4 @@
-// Client-side TypeScript types matching Go server models
+// Client-side TypeScript types matching .NET server models
 
 // ============================================================================
 // User Roles & Authentication
