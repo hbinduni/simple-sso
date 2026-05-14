@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Dapper;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics;
 using Server.Auth;
 using Server.Configuration;
 using Server.Data;
@@ -94,8 +95,18 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 // Global error handler — emits the { success, error } envelope.
+// A malformed request body surfaces as BadHttpRequestException before the
+// handler runs; map that to 400 (matches the previous server's behaviour).
 app.UseExceptionHandler(handler => handler.Run(async ctx =>
 {
+    var error = ctx.Features.Get<IExceptionHandlerFeature>()?.Error;
+    if (error is BadHttpRequestException)
+    {
+        ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+        await ctx.Response.WriteAsJsonAsync(ApiResponse.Error("Invalid request body"));
+        return;
+    }
+
     ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
     await ctx.Response.WriteAsJsonAsync(ApiResponse.Error("Internal server error"));
 }));
