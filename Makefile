@@ -66,10 +66,10 @@ login: check-env ## Login to GitHub Container Registry
 build: build-server build-client ## Build both server and client locally
 	@echo "$(GREEN)✓ All builds completed successfully$(NC)"
 
-build-server: ## Build Go server binary (server/bin/server)
-	@echo "$(BLUE)Building Go server...$(NC)"
-	cd server && go build -o bin/server .
-	@echo "$(GREEN)✓ Server binary built: server/bin/server$(NC)"
+build-server: ## Build .NET server (server/bin)
+	@echo "$(BLUE)Building .NET server...$(NC)"
+	cd server && dotnet publish -c Release -o bin
+	@echo "$(GREEN)✓ Server built: server/bin$(NC)"
 
 build-client: ## Build React client (client/dist)
 	@echo "$(BLUE)Building React client...$(NC)"
@@ -144,13 +144,13 @@ test: ## Run tests locally
 version-up: ## Bump patch version in both client and server
 	@echo "$(BLUE)Bumping patch version...$(NC)"
 	@echo "$(YELLOW)Updating server version...$(NC)"
-	@CURRENT_VERSION=$$(grep 'Version = ' server/version.go | sed 's/.*"\(.*\)".*/\1/'); \
+	@CURRENT_VERSION=$$(grep 'Version = ' server/Version.cs | sed 's/.*"\(.*\)".*/\1/'); \
 	MAJOR=$$(echo $$CURRENT_VERSION | cut -d. -f1); \
 	MINOR=$$(echo $$CURRENT_VERSION | cut -d. -f2); \
 	PATCH=$$(echo $$CURRENT_VERSION | cut -d. -f3); \
 	NEW_PATCH=$$(($$PATCH + 1)); \
 	NEW_VERSION="$$MAJOR.$$MINOR.$$NEW_PATCH"; \
-	sed -i.bak "s/Version = \".*\"/Version = \"$$NEW_VERSION\"/" server/version.go && rm server/version.go.bak; \
+	sed -i.bak "s/Version = \".*\"/Version = \"$$NEW_VERSION\"/" server/Version.cs && rm server/Version.cs.bak; \
 	echo "$(GREEN)✓ Server version: $$CURRENT_VERSION → $$NEW_VERSION$(NC)"
 	@echo "$(YELLOW)Updating client version...$(NC)"
 	@CURRENT_VERSION=$$(grep '"version"' client/package.json | sed 's/.*"version": "\(.*\)".*/\1/'); \
@@ -469,25 +469,25 @@ typecheck: ## Type-check tests and client with tsgo
 	bunx tsgo -p tsconfig.json --noEmit && cd client && bunx tsgo -b --noEmit
 	@echo "$(GREEN)✓ Type-check passed$(NC)"
 
-fmt-server: ## Format Go code
-	cd server && gofmt -w .
+fmt-server: ## Format .NET code
+	cd server && dotnet format
 
 fmt-client: ## Format client code
 	cd client && bun run format
 
 fmt-all: fmt-server fmt-client ## Format all code
 
-lint-server: ## Lint Go code
-	cd server && go vet ./...
+lint-server: ## Lint .NET code (format check)
+	cd server && dotnet format --verify-no-changes
 
 lint-client: ## Lint client code
 	cd client && bun run lint
 
 lint-all: lint-server lint-client ## Lint all code
 
-check-server: ## Check Go code (format + lint)
-	cd server && gofmt -w .
-	cd server && go vet ./...
+check-server: ## Check .NET code (format + build)
+	cd server && dotnet format
+	cd server && dotnet build
 
 check-client: ## Check client code (format + lint + fix)
 	cd client && bun run check
@@ -504,11 +504,10 @@ fix-all: check-all ## Fix all code (alias for check-all)
 deps-upgrade: deps-server deps-client ## Upgrade all dependencies (Go + Bun)
 	@echo "$(GREEN)✓ All dependencies upgraded$(NC)"
 
-deps-server: ## Upgrade Go server dependencies to latest versions
-	@echo "$(BLUE)Upgrading Go dependencies...$(NC)"
-	@cd server && go get -u ./...
-	@cd server && go mod tidy
-	@echo "$(GREEN)✓ Go dependencies upgraded$(NC)"
+deps-server: ## List outdated .NET server dependencies
+	@echo "$(BLUE)Checking .NET dependencies...$(NC)"
+	@cd server && dotnet list package --outdated
+	@echo "$(GREEN)✓ Dependency check complete (update versions in Server.csproj)$(NC)"
 
 deps-client: ## Upgrade React client dependencies to latest versions
 	@echo "$(BLUE)Upgrading client dependencies...$(NC)"
