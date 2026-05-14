@@ -144,13 +144,13 @@ test: ## Run tests locally
 version-up: ## Bump patch version in both client and server
 	@echo "$(BLUE)Bumping patch version...$(NC)"
 	@echo "$(YELLOW)Updating server version...$(NC)"
-	@CURRENT_VERSION=$$(grep 'Version = ' server/Version.cs | sed 's/.*"\(.*\)".*/\1/'); \
+	@CURRENT_VERSION=$$(grep 'const string Version = ' server/Version.cs | sed 's/.*"\(.*\)".*/\1/'); \
 	MAJOR=$$(echo $$CURRENT_VERSION | cut -d. -f1); \
 	MINOR=$$(echo $$CURRENT_VERSION | cut -d. -f2); \
 	PATCH=$$(echo $$CURRENT_VERSION | cut -d. -f3); \
 	NEW_PATCH=$$(($$PATCH + 1)); \
 	NEW_VERSION="$$MAJOR.$$MINOR.$$NEW_PATCH"; \
-	sed -i.bak "s/Version = \".*\"/Version = \"$$NEW_VERSION\"/" server/Version.cs && rm server/Version.cs.bak; \
+	sed -i.bak "s/const string Version = \".*\"/const string Version = \"$$NEW_VERSION\"/" server/Version.cs && rm server/Version.cs.bak; \
 	echo "$(GREEN)✓ Server version: $$CURRENT_VERSION → $$NEW_VERSION$(NC)"
 	@echo "$(YELLOW)Updating client version...$(NC)"
 	@CURRENT_VERSION=$$(grep '"version"' client/package.json | sed 's/.*"version": "\(.*\)".*/\1/'); \
