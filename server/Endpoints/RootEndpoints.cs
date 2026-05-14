@@ -42,7 +42,7 @@ public static class RootEndpoints
             },
         }));
 
-        app.MapGet("/health", async () =>
+        app.MapMethods("/health", ["GET", "HEAD"], async () =>
         {
             var health = new Dictionary<string, object?>
             {
