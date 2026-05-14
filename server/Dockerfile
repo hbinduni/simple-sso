@@ -1,49 +1,39 @@
-# Go Server Dockerfile - Multi-stage build for minimal production image
-FROM golang:1.25-alpine AS builder
+# .NET Server Dockerfile - multi-stage build for a minimal production image
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
 
-# Install build dependencies
-RUN apk add --no-cache git ca-certificates tzdata
+# Copy csproj first and restore — keeps the restore layer cached.
+COPY server/Server.csproj ./server/
+RUN dotnet restore ./server/Server.csproj
 
-# Set working directory
-WORKDIR /build
+# Copy the rest of the server source and publish.
+COPY server/ ./server/
+RUN dotnet publish ./server/Server.csproj -c Release -o /app/publish /p:UseAppHost=false
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Production image - minimal Alpine ASP.NET runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 
-# Download dependencies
-RUN go mod download
-
-# Copy source code
-COPY . ./
-
-# Build the application
-# CGO_ENABLED=0 for static binary, GOOS=linux for Linux target
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o /build/bin/server .
-
-# Production image - minimal Alpine
-FROM alpine:3.21
-
-# Install runtime dependencies
-RUN apk --no-cache add ca-certificates tzdata
+# Runtime dependencies (wget is used by the healthcheck)
+RUN apk --no-cache add ca-certificates tzdata wget
 
 # Create non-root user
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
 
 WORKDIR /app
+COPY --from=build --chown=appuser:appgroup /app/publish ./
 
-# Copy binary from builder
-COPY --from=builder --chown=appuser:appgroup /build/bin/server /app/server
-
-# Use non-root user
 USER appuser
 
-# Expose port
+ENV ASPNETCORE_URLS=http://+:3000 \
+    DOTNET_RUNNING_IN_CONTAINER=true \
+    PORT=3000
+
 EXPOSE 3000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
 # Run the application
-CMD ["/app/server"]
+ENTRYPOINT ["dotnet", "server.dll"]
