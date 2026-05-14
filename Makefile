@@ -1,7 +1,7 @@
-# Makefile for Go + Fiber + React Monorepo
+# Makefile for .NET + React Monorepo
 # Build and push Docker images to GitHub Container Registry
 
-.PHONY: help build build-server build-client docker-build-server docker-build-client docker-build-all push-server push-client push-all deploy login test dev version-up rollout-restart rollout-status
+.PHONY: help build build-server build-client docker-build-server docker-build-client docker-build-all push-server push-client push-all deploy login test dev dev-server dev-client version-info version-up rollout-restart rollout-status
 .PHONY: typecheck fmt-server fmt-client fmt-all lint-server lint-client lint-all check-server check-client check-all fix-all
 .PHONY: k8s-deploy k8s-deploy-server k8s-deploy-client k8s-update k8s-status k8s-logs-server k8s-logs-client
 .PHONY: k8s-reload-server k8s-reload-client k8s-stop k8s-delete k8s-generate-secret k8s-create-image-pull-secret
@@ -13,6 +13,10 @@ GITHUB_USER ?= $(shell echo $$GITHUB_USER)
 GITHUB_TOKEN ?= $(shell echo $$GITHUB_TOKEN)
 IMAGE_VERSION ?= latest
 PROJECT_NAME := bun-hono-react-monorepo
+SERVER_PROJECT := server/Server.csproj
+SERVER_OUTPUT := server/bin
+SERVER_VERSION_FILE := server/Version.cs
+CLIENT_PACKAGE_FILE := client/package.json
 
 # Image names
 SERVER_IMAGE := $(REGISTRY)/$(GITHUB_USER)/$(PROJECT_NAME)-server
@@ -31,7 +35,7 @@ RED := \033[0;31m
 NC := \033[0m # No Color
 
 help: ## Show this help message
-	@echo "$(BLUE)Go + Fiber + React Monorepo$(NC)"
+	@echo "$(BLUE).NET + React Monorepo$(NC)"
 	@echo ""
 	@echo "$(YELLOW)Prerequisites:$(NC)"
 	@echo "  export GITHUB_USER=your-github-username"
@@ -68,8 +72,8 @@ build: build-server build-client ## Build both server and client locally
 
 build-server: ## Build .NET server (server/bin)
 	@echo "$(BLUE)Building .NET server...$(NC)"
-	cd server && dotnet publish -c Release -o bin
-	@echo "$(GREEN)✓ Server built: server/bin$(NC)"
+	dotnet publish $(SERVER_PROJECT) -c Release -o $(SERVER_OUTPUT) /p:UseAppHost=false
+	@echo "$(GREEN)✓ Server built: $(SERVER_OUTPUT)$(NC)"
 
 build-client: ## Build React client (client/dist)
 	@echo "$(BLUE)Building React client...$(NC)"
@@ -135,31 +139,53 @@ info: ## Show image information
 
 # Development commands (local)
 dev: ## Start local development environment (server + client)
-	@echo "$(BLUE)Starting server (Go) and client (React)...$(NC)"
-	bun dev
+	@echo "$(BLUE)Starting server (.NET) and client (React)...$(NC)"
+	bun run dev
+
+dev-server: ## Start .NET server in watch mode
+	@echo "$(BLUE)Starting .NET server...$(NC)"
+	cd server && dotnet watch run
+
+dev-client: ## Start React client dev server
+	@echo "$(BLUE)Starting React client...$(NC)"
+	bun run --filter='@monorepo/client' dev
 
 test: ## Run tests locally
 	bun test
 
+version-info: ## Show current application and image versions
+	@echo "$(BLUE)Version Information:$(NC)"
+	@SERVER_VERSION=$$(grep 'const string Version = ' $(SERVER_VERSION_FILE) | sed 's/.*"\(.*\)".*/\1/'); \
+	CLIENT_VERSION=$$(grep '"version"' $(CLIENT_PACKAGE_FILE) | sed 's/.*"version": "\(.*\)".*/\1/'); \
+	ROOT_VERSION=$$(grep '"version"' package.json | sed 's/.*"version": "\(.*\)".*/\1/'); \
+	DOTNET_VERSION=$$(dotnet --version); \
+	BUN_VERSION=$$(bun --version); \
+	echo "  Server (.NET): $$SERVER_VERSION ($(SERVER_VERSION_FILE))"; \
+	echo "  Client:        $$CLIENT_VERSION ($(CLIENT_PACKAGE_FILE))"; \
+	echo "  Root package:  $$ROOT_VERSION (package.json)"; \
+	echo "  Image version: $(IMAGE_VERSION)"; \
+	echo "  .NET SDK:      $$DOTNET_VERSION"; \
+	echo "  Bun:           $$BUN_VERSION"
+
 version-up: ## Bump patch version in both client and server
 	@echo "$(BLUE)Bumping patch version...$(NC)"
 	@echo "$(YELLOW)Updating server version...$(NC)"
-	@CURRENT_VERSION=$$(grep 'const string Version = ' server/Version.cs | sed 's/.*"\(.*\)".*/\1/'); \
+	@CURRENT_VERSION=$$(grep 'const string Version = ' $(SERVER_VERSION_FILE) | sed 's/.*"\(.*\)".*/\1/'); \
 	MAJOR=$$(echo $$CURRENT_VERSION | cut -d. -f1); \
 	MINOR=$$(echo $$CURRENT_VERSION | cut -d. -f2); \
 	PATCH=$$(echo $$CURRENT_VERSION | cut -d. -f3); \
 	NEW_PATCH=$$(($$PATCH + 1)); \
 	NEW_VERSION="$$MAJOR.$$MINOR.$$NEW_PATCH"; \
-	sed -i.bak "s/const string Version = \".*\"/const string Version = \"$$NEW_VERSION\"/" server/Version.cs && rm server/Version.cs.bak; \
+	sed -i.bak "s/const string Version = \".*\"/const string Version = \"$$NEW_VERSION\"/" $(SERVER_VERSION_FILE) && rm $(SERVER_VERSION_FILE).bak; \
 	echo "$(GREEN)✓ Server version: $$CURRENT_VERSION → $$NEW_VERSION$(NC)"
 	@echo "$(YELLOW)Updating client version...$(NC)"
-	@CURRENT_VERSION=$$(grep '"version"' client/package.json | sed 's/.*"version": "\(.*\)".*/\1/'); \
+	@CURRENT_VERSION=$$(grep '"version"' $(CLIENT_PACKAGE_FILE) | sed 's/.*"version": "\(.*\)".*/\1/'); \
 	MAJOR=$$(echo $$CURRENT_VERSION | cut -d. -f1); \
 	MINOR=$$(echo $$CURRENT_VERSION | cut -d. -f2); \
 	PATCH=$$(echo $$CURRENT_VERSION | cut -d. -f3); \
 	NEW_PATCH=$$(($$PATCH + 1)); \
 	NEW_VERSION="$$MAJOR.$$MINOR.$$NEW_PATCH"; \
-	sed -i.bak "s/\"version\": \".*\"/\"version\": \"$$NEW_VERSION\"/" client/package.json && rm client/package.json.bak; \
+	sed -i.bak "s/\"version\": \".*\"/\"version\": \"$$NEW_VERSION\"/" $(CLIENT_PACKAGE_FILE) && rm $(CLIENT_PACKAGE_FILE).bak; \
 	echo "$(GREEN)✓ Client version: $$CURRENT_VERSION → $$NEW_VERSION$(NC)"
 	@echo "$(GREEN)✓ All versions bumped!$(NC)"
 
@@ -486,8 +512,8 @@ lint-client: ## Lint client code
 lint-all: lint-server lint-client ## Lint all code
 
 check-server: ## Check .NET code (format + build)
-	cd server && dotnet format
-	cd server && dotnet build
+	dotnet format $(SERVER_PROJECT)
+	dotnet build $(SERVER_PROJECT) -c Release
 
 check-client: ## Check client code (format + lint + fix)
 	cd client && bun run check
@@ -501,7 +527,7 @@ fix-all: check-all ## Fix all code (alias for check-all)
 # ============================================================================
 .PHONY: deps-upgrade deps-server deps-client
 
-deps-upgrade: deps-server deps-client ## Upgrade all dependencies (Go + Bun)
+deps-upgrade: deps-server deps-client ## Upgrade/check all dependencies (.NET + Bun)
 	@echo "$(GREEN)✓ All dependencies upgraded$(NC)"
 
 deps-server: ## List outdated .NET server dependencies
