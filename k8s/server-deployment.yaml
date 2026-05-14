@@ -28,11 +28,11 @@ spec:
           protocol: TCP
         env:
         # ConfigMap values
-        - name: NODE_ENV
+        - name: ENVIRONMENT
           valueFrom:
             configMapKeyRef:
               name: monorepo-config
-              key: NODE_ENV
+              key: ENVIRONMENT
         - name: PORT
           valueFrom:
             configMapKeyRef:
@@ -115,7 +115,7 @@ spec:
               optional: true
         resources:
           requests:
-            memory: "128Mi"
+            memory: "256Mi"
             cpu: "100m"
           limits:
             memory: "512Mi"

@@ -1,5 +1,5 @@
 services:
-  # Go/Fiber Server
+  # .NET Server
   server:
     image: ${IMAGE_REGISTRY:-ghcr.io}/${GITHUB_USER}/${PROJECT_NAME:-bun-golang-react-monorepo}-server:${IMAGE_VERSION:-latest}
     container_name: ${SERVER_CONTAINER_NAME:-monorepo-server}

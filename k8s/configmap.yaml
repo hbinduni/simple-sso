@@ -7,7 +7,7 @@ metadata:
     app: monorepo
 data:
   # Server configuration
-  NODE_ENV: "production"
+  ENVIRONMENT: "production"
   SERVER_PORT: "3000"
 
   # Client configuration
