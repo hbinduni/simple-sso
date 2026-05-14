@@ -9,6 +9,7 @@ node_modules/
 dist/
 client/dist/
 server/bin/
+server/obj/
 .turbo/
 *.tsbuildinfo
 
