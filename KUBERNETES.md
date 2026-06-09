@@ -1,6 +1,7 @@
 # Kubernetes Deployment Guide
 
-This guide covers deploying the Bun + Hono + React monorepo application to Kubernetes.
+This guide covers deploying the stateless Microsoft Entra ID SSO service (.NET server + React
+client) to Kubernetes. There is no database to provision.
 
 ## Table of Contents
 
@@ -94,9 +95,15 @@ Edit `.env.k8s`:
 ```bash
 GITHUB_USER=your-github-username
 GITHUB_TOKEN=ghp_your_token
-DATABASE_URL=postgresql://user:pass@host:5432/db
 JWT_SECRET=your-jwt-secret
+AZURE_TENANT_ID=...
+AZURE_CLIENT_ID=...
+AZURE_CLIENT_SECRET=...
+AZURE_REDIRECT_URI=https://api.your-domain.com/api/auth/oauth/microsoft/callback
 ```
+
+`make k8s-generate-secret` reads `JWT_SECRET` and the `AZURE_*` values from the environment into
+the `monorepo-secret`.
 
 ### Kubernetes Manifests
 
@@ -407,22 +414,25 @@ kubectl run test-pod --rm -it --image=curlimages/curl -n bun-hono-react -- sh
 # Then: curl http://server-service:3000
 ```
 
-### Database Connection Issues
+### Microsoft login fails / empty groups
 
-1. Verify DATABASE_URL in secret:
+1. Verify the `AZURE_*` values are in the secret:
    ```bash
    kubectl get secret monorepo-secret -n bun-hono-react -o yaml
    ```
 
-2. Check if database is accessible from cluster
+2. Confirm `AZURE_REDIRECT_URI` matches the redirect URI registered on the Entra app exactly
+   (it must be your public HTTPS ingress URL ending in `/api/auth/oauth/microsoft/callback`).
 
-3. Update secret:
+3. Update the secret and reload:
    ```bash
-   export DATABASE_URL="your-new-database-url"
+   export AZURE_CLIENT_SECRET="your-new-secret"
    make k8s-generate-secret
    make k8s-apply-secret
    make k8s-reload
    ```
+
+4. Empty Groups → grant the `GroupMember.Read.All` Graph permission (admin consent) on the app.
 
 ## Cleanup
 

@@ -1,126 +1,71 @@
-# Quick Start Guide
+# Quick Start
 
-## 🎯 Your New Monorepo Structure
+Simple SSO is a stateless Microsoft Entra ID single sign-on service: a .NET server that brokers
+OAuth logins and issues JWTs, plus a React client. No database.
 
-```
-monorepo/
-├── server/              # Hono backend (http://localhost:3000)
-├── client/              # React Vite (http://localhost:5173)
-├── packages/
-│   └── shared/          # Shared types & utils
-└── package.json         # Bun workspace config
-```
+## 1. Prerequisites
 
-## 🚀 Running the Project
+- .NET SDK ≥ 10.0
+- Bun ≥ 1.3.0
+- A Microsoft Entra ID app registration (see [README.md](./README.md#microsoft-entra-id-setup))
 
-### Development Mode
-
-Run both server and client together:
-```bash
-# Terminal 1 - Server
-bun dev:server
-
-# Terminal 2 - Client
-bun dev:client
-```
-
-Or run them separately as needed.
-
-### Type Checking
+## 2. Configure
 
 ```bash
-bun run typecheck
+bun install
+cp server/.env.example server/.env      # git-ignored — put your real Entra values here
 ```
 
-### Building
+`server/.env` needs:
+```bash
+JWT_SECRET=dev-secret-key-change-in-production
+AZURE_TENANT_ID=...
+AZURE_CLIENT_ID=...
+AZURE_CLIENT_SECRET=...
+AZURE_REDIRECT_URI=http://localhost:3000/api/auth/oauth/microsoft/callback
+FRONTEND_URL=http://localhost:5173
+```
+
+Register that `AZURE_REDIRECT_URI` as a **Web** redirect URI on the Entra app. For group names,
+add the `GroupMember.Read.All` Graph permission and grant admin consent.
+
+## 3. Run
 
 ```bash
-# Build everything
-bun build
-
-# Build individually
-bun build:server
-bun build:client
+make dev            # server (:3000) + client (:5173) together
+# or individually:
+make dev-server
+make dev-client
 ```
 
-## 💡 Using Shared Types
+Open http://localhost:5173 and click **Sign in with Microsoft**.
 
-### Server (`server/src/index.ts`)
-```typescript
-import type { ApiResponse, Feedback } from '@shared/types'
+## 4. The login flow
 
-app.get('/api/feedback', (c) => {
-  const response: ApiResponse<Feedback[]> = {
-    success: true,
-    data: [/* ... */]
-  }
-  return c.json(response)
-})
+```
+Home → GET /api/auth/oauth/microsoft → Entra → GET /api/auth/oauth/microsoft/callback
+     → redirect to FRONTEND_URL/auth/callback#accessToken=…&refreshToken=…
+     → SPA stores tokens, calls GET /api/auth/me → shows profile + groups
 ```
 
-### Client (`client/src/api/feedback.ts`)
-```typescript
-import type { ApiResponse, Feedback } from '@shared/types'
+## 5. Endpoints
 
-export async function getFeedback(): Promise<Feedback[]> {
-  const response = await fetch(`${API_BASE_URL}/api/feedback`)
-  const data: ApiResponse<Feedback[]> = await response.json()
-  return data.data!
-}
-```
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/auth/oauth/microsoft` | GET | No | Start Microsoft login |
+| `/api/auth/oauth/microsoft/callback` | GET | No | OAuth callback → SPA with tokens |
+| `/api/auth/me` | GET | Yes | Current user + groups |
+| `/api/auth/refresh` | POST | No | New access token from a refresh token |
+| `/api/auth/logout` | POST | Yes | Client-side logout |
+| `/health` | GET | No | Liveness |
 
-### Component (`client/src/App.tsx`)
-```typescript
-import type { Feedback } from '@shared/types'
-import { formatDate } from '@shared/utils'
-
-const [feedbacks, setFeedbacks] = useState<Feedback[]>([])
-```
-
-## 🔧 Adding Dependencies
+## 6. Common scripts
 
 ```bash
-# Server dependency
-bun add <package> --filter @monorepo/server
-
-# Client dependency
-bun add <package> --filter @monorepo/client
-
-# Shared package dependency
-bun add <package> --filter @monorepo/shared
-
-# Dev dependency (root)
-bun add -d <package>
+bun run build        # build server + client
+bun run typecheck    # tsgo type-check
+bun run check        # Biome lint + format (+ dotnet format)
+bun test             # tests
 ```
 
-## 📦 Key Benefits of This Setup
-
-✅ **Type Safety**: Shared types between frontend and backend
-✅ **Single Source of Truth**: API contracts defined once
-✅ **Fast**: Bun workspaces for instant installs
-✅ **Hot Reload**: Both server and client support HMR
-✅ **Clean Architecture**: Clear separation of concerns
-
-## 🎨 Path Aliases
-
-### Server
-- `@server/*` → `server/src/*` (access server modules from within server)
-- `@shared/*` → `packages/shared/src/*`
-
-### Client
-- `@/*` → `client/src/*` (access client modules from within client)
-- `@shared/*` → `packages/shared/src/*`
-
-## 🧪 Example Workflow
-
-1. Define types in `packages/shared/src/types/`
-2. Create API endpoint in `server/src/`
-3. Use types in both server response and client request
-4. TypeScript ensures everything matches!
-
-## 📝 Next Steps
-
-1. Add more shared types to `packages/shared/src/types/`
-2. Create API routes in `server/src/routes/`
-3. Build React components in `client/src/components/`
-4. Enjoy type-safe full-stack development!
+See [README.md](./README.md) for the full picture and [ENV_VARS.md](./ENV_VARS.md) for all variables.

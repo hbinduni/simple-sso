@@ -1,364 +1,115 @@
 # Docker Deployment Guide
 
-Complete guide for deploying the monorepo application using Docker.
+Deploying the Simple SSO service with Docker. Two stateless services — a .NET server and an
+Nginx-served React client. There is no database.
 
 ## 📋 Prerequisites
 
-- Docker Engine 20.10+
-- Docker Compose 2.0+
-- Make (optional, for convenience commands)
-
-## 🚀 Quick Start
-
-### 1. Setup Environment Variables
-
-```bash
-# Copy the production environment template
-cp .env.production.example .env.production
-
-# Edit .env.production and update with your values
-nano .env.production
-```
-
-**Important**: Update these values in `.env.production`:
-- `POSTGRES_PASSWORD` - Use a strong password
-- `VITE_API_URL` - Your server URL (for production: `http://your-domain.com:3000`)
-
-### 2. Build and Start Services
-
-```bash
-# Build Docker images
-docker-compose --env-file .env.production build
-
-# Start all services
-docker-compose --env-file .env.production up -d
-
-# Or use Make commands
-make build
-make up
-```
-
-### 3. Check Services
-
-```bash
-# View logs
-docker-compose --env-file .env.production logs -f
-
-# Check container status
-docker-compose --env-file .env.production ps
-
-# Or use Make
-make logs
-make ps
-```
-
-### 4. Access Application
-
-- **Client**: http://localhost (port 80)
-- **Server API**: http://localhost:3000
-- **Database**: localhost:5432
+- Docker Engine 20.10+ and Docker Compose v2
+- A Microsoft Entra ID app registration (see [README.md](./README.md#microsoft-entra-id-setup))
+- Make (optional, for the build/push convenience targets)
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐
-│  React Client   │  Port 80 (Nginx)
-│   (Container)   │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Hono Server    │  Port 3000
-│   (Container)   │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   PostgreSQL    │  Port 5432
-│   (Container)   │
-└─────────────────┘
+┌─────────────────┐        ┌─────────────────┐
+│  React Client   │  :80   │   .NET Server   │  :3000
+│  (Nginx)        │ ─────▶ │  (SSO broker)   │ ─────▶  Microsoft Entra ID
+└─────────────────┘        └─────────────────┘
 ```
 
-## 📦 Services
+The server holds no state — it brokers Entra logins and issues JWTs, so it scales horizontally
+with no shared backing store.
 
-### 1. PostgreSQL Database
-- **Image**: postgres:16-alpine
-- **Port**: 5432
-- **Volume**: postgres_data (persistent)
-- **Auto-initialization**: Runs schema.sql and seed.sql on first start
+## 🚀 Quick Start
 
-### 2. Hono Server
-- **Base**: oven/bun:1.3.0-slim
-- **Port**: 3000
-- **Health Check**: GET /
-- **Dependencies**: PostgreSQL
-
-### 3. React Client
-- **Base**: nginx:alpine
-- **Port**: 80
-- **Build**: Vite production build
-- **Health Check**: GET /health
-
-## 🛠️ Make Commands
+### 1. Configure environment
 
 ```bash
-make help          # Show all available commands
-make dev           # Start development mode
-make build         # Build Docker images
-make up            # Start all services
-make down          # Stop all services
-make restart       # Restart all services
-make logs          # Show logs from all services
-make logs-server   # Show server logs only
-make logs-client   # Show client logs only
-make logs-db       # Show database logs only
-make ps            # Show running containers
-make clean         # Remove containers, volumes, and images
-make shell-server  # Open shell in server container
-make shell-db      # Open PostgreSQL shell
-make test          # Run tests
-```
-
-## 🔧 Docker Compose Commands
-
-### Start Services
-```bash
-# Start in detached mode
-docker-compose --env-file .env.production up -d
-
-# Start with logs
-docker-compose --env-file .env.production up
-
-# Start specific service
-docker-compose --env-file .env.production up -d server
-```
-
-### Stop Services
-```bash
-# Stop all services
-docker-compose --env-file .env.production down
-
-# Stop and remove volumes
-docker-compose --env-file .env.production down -v
-
-# Stop and remove images
-docker-compose --env-file .env.production down --rmi all
-```
-
-### View Logs
-```bash
-# All services
-docker-compose --env-file .env.production logs -f
-
-# Specific service
-docker-compose --env-file .env.production logs -f server
-
-# Last 100 lines
-docker-compose --env-file .env.production logs --tail=100 server
-```
-
-### Execute Commands
-```bash
-# Server shell
-docker-compose --env-file .env.production exec server sh
-
-# Database shell
-docker-compose --env-file .env.production exec postgres psql -U postgres -d app_db
-
-# Run migrations
-docker-compose --env-file .env.production exec postgres psql -U postgres -d app_db -f /docker-entrypoint-initdb.d/01-schema.sql
-```
-
-## 🔍 Debugging
-
-### Check Container Health
-```bash
-docker-compose --env-file .env.production ps
-```
-
-### View Container Logs
-```bash
-# Server logs
-docker logs monorepo-server -f
-
-# Client logs
-docker logs monorepo-client -f
-
-# Database logs
-docker logs monorepo-db -f
-```
-
-### Inspect Container
-```bash
-docker inspect monorepo-server
-docker inspect monorepo-client
-docker inspect monorepo-db
-```
-
-### Test Database Connection
-```bash
-# From host
-docker-compose --env-file .env.production exec postgres psql -U postgres -d app_db -c "SELECT version();"
-
-# From server container
-docker-compose --env-file .env.production exec server sh -c 'psql "$DATABASE_URL" -c "SELECT version();"'
-```
-
-## 🔄 Database Operations
-
-### Backup Database
-```bash
-docker-compose --env-file .env.production exec postgres pg_dump -U postgres app_db > backup.sql
-```
-
-### Restore Database
-```bash
-docker-compose --env-file .env.production exec -T postgres psql -U postgres app_db < backup.sql
-```
-
-### Reset Database
-```bash
-# Drop and recreate
-docker-compose --env-file .env.production exec postgres psql -U postgres -d app_db -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-
-# Re-run migrations
-docker-compose --env-file .env.production exec postgres psql -U postgres -d app_db -f /docker-entrypoint-initdb.d/01-schema.sql
-docker-compose --env-file .env.production exec postgres psql -U postgres -d app_db -f /docker-entrypoint-initdb.d/02-seed.sql
-```
-
-## 📊 Monitoring
-
-### Container Stats
-```bash
-docker stats monorepo-server monorepo-client monorepo-db
-```
-
-### Health Checks
-```bash
-# Server health
-curl http://localhost:3000/
-
-# Client health
-curl http://localhost/health
-
-# Database health
-docker-compose --env-file .env.production exec postgres pg_isready -U postgres
-```
-
-## 🚀 Production Deployment
-
-### 1. Environment Variables
-```bash
-# Use production values
 cp .env.production.example .env.production
-
-# Update these values:
-POSTGRES_PASSWORD=strong_random_password
-VITE_API_URL=https://api.yourdomain.com
-SERVER_PORT=3000
-CLIENT_PORT=80
+nano .env.production
 ```
 
-### 2. Build for Production
+Set at least:
+- `JWT_SECRET` — strong value, ≥32 chars (`openssl rand -base64 32`)
+- `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_REDIRECT_URI`
+- `VITE_API_URL` — the client's view of the server (e.g. `https://api.your-domain.com`)
+- `FRONTEND_URL` — the client origin (CORS + post-login redirect)
+- `GITHUB_USER` — for pulling images from GHCR
+
+### 2. Build & push images (GHCR)
+
 ```bash
-# Build with no cache for fresh production build
-docker-compose --env-file .env.production build --no-cache
+export GITHUB_USER=your-github-username
+export GITHUB_TOKEN=ghp_your_token
+
+make deploy        # login + build server & client + push (or run the steps individually)
+# make docker-build-all
+# make push-all
 ```
 
-### 3. Deploy
+### 3. Start
+
 ```bash
-# Start services
-docker-compose --env-file .env.production up -d
-
-# Check all services are healthy
-docker-compose --env-file .env.production ps
+docker compose --env-file .env.production pull
+docker compose --env-file .env.production up -d
+docker compose --env-file .env.production ps
 ```
 
-### 4. SSL/TLS (Optional)
-Add reverse proxy like Nginx or Traefik for HTTPS support.
+- **Client**: http://localhost (port 80)
+- **Server API**: http://localhost:3000
 
-## 🧹 Cleanup
+## 🔧 Common Commands
 
-### Remove Everything
 ```bash
-# Stop and remove containers, networks, volumes, and images
-make clean
+# Logs
+docker compose --env-file .env.production logs -f
+docker compose --env-file .env.production logs -f server
 
-# Or manually
-docker-compose --env-file .env.production down -v --rmi all
+# Restart / stop
+docker compose --env-file .env.production up -d server   # recreate one service
+docker compose --env-file .env.production down            # stop all
+
+# Shell into the server container
+docker compose --env-file .env.production exec server sh
 ```
 
-### Remove Only Volumes
-```bash
-make clean-volumes
+## 📝 Environment Variables (.env.production)
 
-# Or manually
-docker-compose --env-file .env.production down -v
-```
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `JWT_SECRET` | ✅ | Signs the access/refresh tokens; ≥32 chars |
+| `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_REDIRECT_URI` | ✅ (for SSO) | Entra app registration |
+| `FRONTEND_URL` | ✅ | Client origin (CORS + post-login redirect) |
+| `VITE_API_URL` | ✅ | API URL the client calls (runtime-injected) |
+| `ENVIRONMENT` | — | `production` (default) or `development` |
+| `SERVER_PORT` / `CLIENT_PORT` | — | Host ports (default 3000 / 80) |
+| `GITHUB_USER` / `IMAGE_REGISTRY` / `PROJECT_NAME` / `IMAGE_VERSION` | — | Image path components |
 
-## 📝 Environment Variables
+See [ENV_VARS.md](./ENV_VARS.md) for the full reference.
 
-### Required Variables (.env.production)
+## 🔐 Security
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `NODE_ENV` | Environment mode | `production` |
-| `POSTGRES_USER` | Database user | `postgres` |
-| `POSTGRES_PASSWORD` | Database password | `your_secure_password` |
-| `POSTGRES_DB` | Database name | `app_db` |
-| `POSTGRES_PORT` | Database port | `5432` |
-| `SERVER_PORT` | Server port | `3000` |
-| `CLIENT_PORT` | Client port | `80` |
-| `VITE_API_URL` | API URL for client | `http://localhost:3000` |
-
-## 🔐 Security Best Practices
-
-1. **Never commit** `.env.production` with real credentials
-2. Use **strong passwords** for `POSTGRES_PASSWORD`
-3. Run containers as **non-root users** (already configured)
-4. Keep Docker images **up to date**
-5. Use **secrets management** for production (Docker Secrets, Vault)
-6. Enable **SSL/TLS** for production deployments
-7. Implement **rate limiting** and **CORS** properly
-8. Regular **security updates** for base images
+1. **Never commit** `.env.production` with real values (it's git-ignored).
+2. Generate a strong `JWT_SECRET`; the server refuses to start with a missing/weak one in production.
+3. Keep `AZURE_CLIENT_SECRET` in your secret store; rotate it if exposed.
+4. Terminate TLS at a reverse proxy (Nginx/Traefik/Caddy) in front of the services.
+5. `AZURE_REDIRECT_URI` must use your real public HTTPS URL and be registered in Entra.
 
 ## 🐛 Troubleshooting
 
-### Server Won't Start
-```bash
-# Check logs
-docker logs monorepo-server
+**Server won't start** — check `docker compose --env-file .env.production logs server`. The most
+common cause is a missing/weak `JWT_SECRET` in production (the server fails closed by design).
 
-# Common issues:
-# - Database not ready: Wait for health check
-# - Port conflict: Change SERVER_PORT in .env.production
-```
+**Login returns to the SPA with `#error=...`** — verify `AZURE_REDIRECT_URI` matches the redirect
+URI registered on the Entra app exactly, and that the four `AZURE_*` values are set in the container
+(`docker compose --env-file .env.production exec server env | grep AZURE`).
 
-### Client Build Fails
-```bash
-# Check build args
-docker-compose --env-file .env.production config
+**Empty Groups in the profile** — add the `GroupMember.Read.All` Graph permission and grant admin
+consent on the Entra app registration.
 
-# Rebuild without cache
-docker-compose --env-file .env.production build --no-cache client
-```
+## 📚 Resources
 
-### Database Connection Failed
-```bash
-# Check database is running
-docker-compose --env-file .env.production ps postgres
-
-# Test connection
-docker-compose --env-file .env.production exec postgres pg_isready
-
-# Check environment variables
-docker-compose --env-file .env.production exec server env | grep DATABASE_URL
-```
-
-## 📚 Additional Resources
-
-- [Docker Documentation](https://docs.docker.com/)
 - [Docker Compose Reference](https://docs.docker.com/compose/compose-file/)
-- [Bun Documentation](https://bun.sh/docs)
-- [PostgreSQL Docker](https://hub.docker.com/_/postgres)
-- [Nginx Docker](https://hub.docker.com/_/nginx)
+- [KUBERNETES.md](./KUBERNETES.md) — Kubernetes deployment
+- [ENV_VARS.md](./ENV_VARS.md) — Environment variables
