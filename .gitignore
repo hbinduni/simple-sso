@@ -20,6 +20,7 @@ server/obj/
 .env.local
 .env.*.local
 .env.build
+.env.production
 server/.env
 client/.env
 
