@@ -1,22 +1,17 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Dapper;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Server.Auth;
 using Server.Configuration;
-using Server.Data;
 using Server.Endpoints;
 using Server.Models;
 
-// Load .env when present (dev only) — mirrors the Go server's godotenv behaviour.
+// Load .env when present (dev only).
 if (File.Exists(".env"))
     Env.Load();
-
-// Map snake_case columns (created_at) to PascalCase properties (CreatedAt).
-DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 var config = AppConfig.Load();
 
@@ -29,25 +24,12 @@ builder.Services.AddSingleton(config);
 var jwtService = new JwtService(config.JwtSecret);
 builder.Services.AddSingleton(jwtService);
 
-Database? database = config.DatabaseUrl.Length > 0
-    ? Database.Connect(config.DatabaseUrl)
-    : null;
-
-if (database is not null)
-{
-    builder.Services.AddSingleton(database);
-    builder.Services.AddScoped<UserRepository>();
-    builder.Services.AddScoped<SessionRepository>();
-    builder.Services.AddScoped<ItemRepository>();
-    builder.Services.AddScoped<OAuthRepository>();
-
-    if (config.MicrosoftOAuthEnabled)
-        builder.Services.AddHttpClient<MicrosoftOAuthService>();
-}
+// Stateless SSO broker — no datastore. The Microsoft OAuth endpoints mount only when
+// Entra is configured; the typed HttpClient is used for the code/token exchange + Graph.
+if (config.MicrosoftOAuthEnabled)
+    builder.Services.AddHttpClient<MicrosoftOAuthService>();
 else
-{
-    Console.WriteLine("⚠️  No DATABASE_URL provided, running without database");
-}
+    Console.WriteLine("⚠️  Microsoft Entra ID not configured (AZURE_* unset); SSO endpoints disabled");
 
 builder.Services.ConfigureHttpJsonOptions(o =>
 {
@@ -133,21 +115,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapOpenApi();
-app.MapRootEndpoints(database);
+app.MapRootEndpoints();
+app.MapAuthEndpoints();
 
-if (database is not null)
-{
-    app.MapAuthEndpoints();
-    app.MapItemEndpoints();
-
-    if (config.MicrosoftOAuthEnabled)
-        app.MapOAuthEndpoints();
-}
-else
-{
-    // No database: items list returns empty data, auth routes are not mounted.
-    app.MapGet("/api/items", () => Results.Ok(ApiResponse.Ok(Array.Empty<object>())));
-}
+if (config.MicrosoftOAuthEnabled)
+    app.MapOAuthEndpoints();
 
 app.MapFallback((HttpContext ctx) =>
     Results.Json(

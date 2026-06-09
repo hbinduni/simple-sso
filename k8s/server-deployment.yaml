@@ -44,74 +44,36 @@ spec:
               name: monorepo-config
               key: FRONTEND_URL
               optional: true
-        # Database
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: monorepo-secret
-              key: DATABASE_URL
-        # JWT Authentication
+        # JWT Authentication (signs the access/refresh tokens we issue)
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
               name: monorepo-secret
               key: JWT_SECRET
-        # OAuth - Google
-        - name: GOOGLE_CLIENT_ID
+        # Microsoft Entra ID (Azure AD) OAuth
+        - name: AZURE_TENANT_ID
           valueFrom:
             secretKeyRef:
               name: monorepo-secret
-              key: GOOGLE_CLIENT_ID
+              key: AZURE_TENANT_ID
               optional: true
-        - name: GOOGLE_CLIENT_SECRET
+        - name: AZURE_CLIENT_ID
           valueFrom:
             secretKeyRef:
               name: monorepo-secret
-              key: GOOGLE_CLIENT_SECRET
+              key: AZURE_CLIENT_ID
               optional: true
-        - name: GOOGLE_REDIRECT_URI
+        - name: AZURE_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
               name: monorepo-secret
-              key: GOOGLE_REDIRECT_URI
+              key: AZURE_CLIENT_SECRET
               optional: true
-        # OAuth - Facebook
-        - name: FACEBOOK_CLIENT_ID
+        - name: AZURE_REDIRECT_URI
           valueFrom:
             secretKeyRef:
               name: monorepo-secret
-              key: FACEBOOK_CLIENT_ID
-              optional: true
-        - name: FACEBOOK_CLIENT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: monorepo-secret
-              key: FACEBOOK_CLIENT_SECRET
-              optional: true
-        - name: FACEBOOK_REDIRECT_URI
-          valueFrom:
-            secretKeyRef:
-              name: monorepo-secret
-              key: FACEBOOK_REDIRECT_URI
-              optional: true
-        # OAuth - Twitter
-        - name: TWITTER_CLIENT_ID
-          valueFrom:
-            secretKeyRef:
-              name: monorepo-secret
-              key: TWITTER_CLIENT_ID
-              optional: true
-        - name: TWITTER_CLIENT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: monorepo-secret
-              key: TWITTER_CLIENT_SECRET
-              optional: true
-        - name: TWITTER_REDIRECT_URI
-          valueFrom:
-            secretKeyRef:
-              name: monorepo-secret
-              key: TWITTER_REDIRECT_URI
+              key: AZURE_REDIRECT_URI
               optional: true
         resources:
           requests:

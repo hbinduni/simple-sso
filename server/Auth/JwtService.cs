@@ -19,26 +19,25 @@ public sealed class JwtService
     public JwtService(string secret) =>
         _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
 
-    public string GenerateAccessToken(User user, IReadOnlyList<string>? groups = null) =>
-        Generate(user, TokenType.Access, AccessTokenExpiry, groups);
+    public string GenerateAccessToken(AuthUser user) => Generate(user, TokenType.Access, AccessTokenExpiry);
 
-    public string GenerateRefreshToken(User user, IReadOnlyList<string>? groups = null) =>
-        Generate(user, TokenType.Refresh, RefreshTokenExpiry, groups);
+    public string GenerateRefreshToken(AuthUser user) => Generate(user, TokenType.Refresh, RefreshTokenExpiry);
 
-    private string Generate(User user, TokenType type, TimeSpan expiry, IReadOnlyList<string>? groups)
+    private string Generate(AuthUser user, TokenType type, TimeSpan expiry)
     {
         var now = DateTime.UtcNow;
         var claims = new Dictionary<string, object>
         {
             ["sub"] = user.Id,
             ["email"] = user.Email,
-            ["role"] = user.Role.ToString().ToLowerInvariant(),
+            ["name"] = user.Name,
+            ["role"] = user.Role,
             ["type"] = type.ToString().ToLowerInvariant(),
         };
-        // OAuth group memberships (display names), captured at login and carried so the
-        // profile endpoint can surface them without re-querying the identity provider.
-        if (groups is { Count: > 0 })
-            claims["groups"] = groups;
+        // Group memberships (display names) come from the identity provider at login and ride
+        // along in the token, so the profile endpoint needs no datastore to surface them.
+        if (user.Groups.Count > 0)
+            claims["groups"] = user.Groups;
 
         var descriptor = new SecurityTokenDescriptor
         {
@@ -62,6 +61,7 @@ public sealed class JwtService
         return new JwtClaims(
             jwt.GetClaim("sub").Value,
             jwt.GetClaim("email").Value,
+            jwt.TryGetPayloadValue<string>("name", out var name) ? name : "",
             jwt.GetClaim("role").Value,
             jwt.GetClaim("type").Value,
             groups);
@@ -78,4 +78,4 @@ public sealed class JwtService
     };
 }
 
-public record JwtClaims(string UserId, string Email, string Role, string Type, IReadOnlyList<string> Groups);
+public record JwtClaims(string UserId, string Email, string Name, string Role, string Type, IReadOnlyList<string> Groups);

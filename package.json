@@ -2,7 +2,7 @@
   "name": "bun-hono-react-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "Full-stack monorepo with .NET, React, PostgreSQL, and Docker",
+  "description": "Stateless Microsoft Entra ID SSO broker (.NET + React)",
   "packageManager": "bun@1.3.0",
   "workspaces": [
     "client"
@@ -26,15 +26,6 @@
     "test:coverage": "bun test --coverage",
     "test:health": "bun test tests/health-check.test.ts",
     "precommit": "make check-all && bun test",
-    "db:create": "dotenv -e server/.env -- sh -c 'psql \"$DATABASE_URL\" -f db/schema.sql'",
-    "db:drop": "dotenv -e server/.env -- sh -c 'psql \"$DATABASE_URL\" -c \"DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;\"'",
-    "db:seed": "dotenv -e server/.env -- sh -c 'psql \"$DATABASE_URL\" -f db/seed.sql'",
-    "db:run": "dotenv -e server/.env -- sh -c 'psql \"$DATABASE_URL\" -f'",
-    "db:fresh": "bun run db:drop && bun run db:create && bun run db:seed",
-    "db:reset": "bun run db:fresh",
-    "db:shell": "dotenv -e server/.env -- sh -c 'psql \"$DATABASE_URL\"'",
-    "db:tables": "dotenv -e server/.env -- sh -c 'psql \"$DATABASE_URL\" -c \"\\dt\"'",
-    "db:cleanup-sessions": "dotenv -e server/.env -- sh -c 'psql \"$DATABASE_URL\" -c \"SELECT cleanup_expired_sessions();\"'",
     "update:frontend": "bun update vite @vitejs/plugin-react react react-dom --latest",
     "check:versions": "bunx vite --version && bun pm ls react react-dom @vitejs/plugin-react"
   },
@@ -44,7 +35,6 @@
     "@typescript/native-preview": "^7.0.0-dev.20260311.1",
     "@vitejs/plugin-react": "^5.1.4",
     "concurrently": "^9.2.1",
-    "dotenv-cli": "^11.0.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
   },

@@ -5,7 +5,6 @@ public sealed class AppConfig
 {
     public required string Environment { get; init; }
     public required string Port { get; init; }
-    public required string DatabaseUrl { get; init; }
     public required string FrontendUrl { get; init; }
     public required string JwtSecret { get; init; }
 
@@ -56,7 +55,6 @@ public sealed class AppConfig
         {
             Environment = environment,
             Port = Env("PORT", "3000"),
-            DatabaseUrl = Env("DATABASE_URL", ""),
             FrontendUrl = Env("FRONTEND_URL", "http://localhost:5173"),
             JwtSecret = jwtSecret,
             AzureTenantId = Env("AZURE_TENANT_ID", ""),

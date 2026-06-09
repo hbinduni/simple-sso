@@ -82,9 +82,8 @@ Edit `k8s/configmap.yaml` to modify application configuration:
 ### Secrets
 
 Edit `k8s/secret.yaml` (created from template) for sensitive data:
-- `DATABASE_URL`: PostgreSQL connection string
-- `JWT_SECRET`: JWT signing secret
-- Other sensitive configuration
+- `JWT_SECRET`: signs the access/refresh tokens we issue
+- `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_REDIRECT_URI`: Microsoft Entra ID OAuth
 
 ### Image Registry
 

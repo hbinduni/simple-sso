@@ -219,21 +219,18 @@ k8s-check-context: ## Check current Kubernetes context
 
 k8s-generate-secret: ## Generate Kubernetes secret from environment variables
 	@echo "$(BLUE)Generating Kubernetes secret...$(NC)"
-	@if [ -z "$$DATABASE_URL" ]; then \
-		echo "$(YELLOW)Warning: DATABASE_URL not set, using default$(NC)"; \
-		DATABASE_URL="postgresql://postgres:postgres@postgres:5432/monorepo"; \
-	else \
-		DATABASE_URL="$$DATABASE_URL"; \
-	fi; \
-	if [ -z "$$JWT_SECRET" ]; then \
+	@if [ -z "$$JWT_SECRET" ]; then \
 		echo "$(YELLOW)Warning: JWT_SECRET not set, generating random$(NC)"; \
 		JWT_SECRET=$$(openssl rand -base64 32); \
 	else \
 		JWT_SECRET="$$JWT_SECRET"; \
 	fi; \
 	kubectl create secret generic monorepo-secret \
-		--from-literal=DATABASE_URL="$$DATABASE_URL" \
 		--from-literal=JWT_SECRET="$$JWT_SECRET" \
+		--from-literal=AZURE_TENANT_ID="$$AZURE_TENANT_ID" \
+		--from-literal=AZURE_CLIENT_ID="$$AZURE_CLIENT_ID" \
+		--from-literal=AZURE_CLIENT_SECRET="$$AZURE_CLIENT_SECRET" \
+		--from-literal=AZURE_REDIRECT_URI="$$AZURE_REDIRECT_URI" \
 		--namespace=$(K8S_NAMESPACE) \
 		--dry-run=client -o yaml > k8s/secret.yaml
 	@echo "$(GREEN)✓ Secret generated: k8s/secret.yaml$(NC)"

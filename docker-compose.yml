@@ -7,9 +7,12 @@ services:
     environment:
       ENVIRONMENT: ${ENVIRONMENT:-production}
       PORT: ${SERVER_PORT:-3000}
-      DATABASE_URL: ${DATABASE_URL}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       JWT_SECRET: ${JWT_SECRET}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID:-}
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID:-}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET:-}
+      AZURE_REDIRECT_URI: ${AZURE_REDIRECT_URI:-}
     ports:
       - "${SERVER_PORT:-3000}:3000"
     networks:

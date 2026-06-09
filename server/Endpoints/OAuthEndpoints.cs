@@ -4,19 +4,19 @@ using System.Text.Json;
 using Server.Auth;
 using Server.Common;
 using Server.Configuration;
-using Server.Data;
-using Server.Models;
 
 namespace Server.Endpoints;
 
 /// <summary>
-/// "Sign in with Microsoft" via the Entra ID authorization-code flow.
+/// "Sign in with Microsoft" via the Entra ID authorization-code flow. The server is a stateless
+/// SSO broker: there is no datastore. Identity (and group memberships) come straight from the
+/// Entra token and are minted into our own JWTs.
 ///
 ///   1. GET /api/auth/oauth/microsoft           -> redirect the browser to Entra,
 ///      stashing { state, nonce, PKCE verifier } in a short-lived HttpOnly cookie.
-///   2. GET /api/auth/oauth/microsoft/callback   -> verify state, exchange the code,
-///      find-or-create the user + oauth link, mint our own JWTs, and redirect back to
-///      the SPA with the tokens in the URL fragment (kept out of server/proxy logs).
+///   2. GET /api/auth/oauth/microsoft/callback   -> verify state, exchange the code, read the
+///      identity + groups, mint our JWTs, and redirect back to the SPA with the tokens in the
+///      URL fragment (kept out of server/proxy logs).
 /// </summary>
 public static class OAuthEndpoints
 {
@@ -46,9 +46,6 @@ public static class OAuthEndpoints
         string? error_description,
         MicrosoftOAuthService ms,
         AppConfig config,
-        UserRepository users,
-        OAuthRepository oauth,
-        SessionRepository sessions,
         JwtService jwt,
         ILoggerFactory loggerFactory,
         CancellationToken ct)
@@ -64,41 +61,23 @@ public static class OAuthEndpoints
         if (DecodeTx(txCookie) is not { } tx || !FixedTimeEquals(tx.State, state))
             return ToClient(config, "error", "state_mismatch");
 
-        MicrosoftUser info;
         try
         {
-            info = await ms.ExchangeCodeAsync(code, tx.Verifier, tx.Nonce, ct);
-        }
-        catch
-        {
-            return ToClient(config, "error", "token_exchange_failed");
-        }
+            var info = await ms.ExchangeCodeAsync(code, tx.Verifier, tx.Nonce, ct);
 
-        // Everything past the token exchange touches the database. Failures here (e.g. the DB
-        // being down) must still land the user on the SPA with a readable error rather than a
-        // raw 500 — but we log the real cause so it stays diagnosable server-side.
-        try
-        {
-            var user = await ResolveUserAsync(info, users, oauth);
-            if (user is null)
-                return ToClient(config, "error", "account_link_failed");
-
-            // Best-effort group lookup; carried in our JWT so /api/auth/me can surface it.
+            // Best-effort group lookup; carried in the JWT so /api/auth/me can surface it.
             var groups = await ms.GetGroupNamesAsync(info.GraphAccessToken, ct);
 
-            var session = new Session
-            {
-                Id = TypeId.NewSessionId(),
-                UserId = user.Id,
-                UserAgent = ctx.Request.Headers.UserAgent.FirstOrDefault(),
-                IpAddress = ClientIp.Get(ctx),
-                ExpiresAt = DateTime.UtcNow.Add(JwtService.RefreshTokenExpiry),
-            };
-            await sessions.CreateAsync(session);
+            var user = new AuthUser(
+                Id: info.Oid, // Entra object id — stable per-user identifier
+                Email: Validation.NormalizeEmail(info.Email),
+                Name: info.Name,
+                Role: "user",
+                Groups: groups);
 
             var fragment =
-                $"accessToken={Uri.EscapeDataString(jwt.GenerateAccessToken(user, groups))}" +
-                $"&refreshToken={Uri.EscapeDataString(jwt.GenerateRefreshToken(user, groups))}" +
+                $"accessToken={Uri.EscapeDataString(jwt.GenerateAccessToken(user))}" +
+                $"&refreshToken={Uri.EscapeDataString(jwt.GenerateRefreshToken(user))}" +
                 $"&expiresIn={(int)JwtService.AccessTokenExpiry.TotalSeconds}" +
                 $"&tokenType=Bearer";
             return Results.Redirect($"{config.FrontendUrl.TrimEnd('/')}/auth/callback#{fragment}");
@@ -106,43 +85,8 @@ public static class OAuthEndpoints
         catch (Exception ex)
         {
             loggerFactory.CreateLogger("OAuth.Microsoft").LogError(ex, "Microsoft OAuth callback failed");
-            return ToClient(config, "error", "server_error");
+            return ToClient(config, "error", "token_exchange_failed");
         }
-    }
-
-    /// <summary>Find the user behind this Microsoft account, linking by verified email or
-    /// provisioning a new passwordless user on first sign-in.</summary>
-    private static async Task<User?> ResolveUserAsync(
-        MicrosoftUser info, UserRepository users, OAuthRepository oauth)
-    {
-        var existingLink = await oauth.GetAsync(OAuthProvider.Microsoft, info.Oid);
-        if (existingLink is not null)
-            return await users.GetByIdAsync(existingLink.UserId);
-
-        var email = Validation.NormalizeEmail(info.Email);
-        var user = await users.GetByEmailAsync(email);
-        if (user is null)
-        {
-            user = new User
-            {
-                Id = TypeId.NewUserId(),
-                Email = email,
-                Name = info.Name,
-                Role = UserRole.User,
-                EmailVerified = true, // Entra has already verified the address
-            };
-            await users.CreateAsync(user);
-        }
-
-        // We never call Microsoft Graph, so the provider tokens are left null on purpose.
-        await oauth.CreateAsync(new OAuthAccount
-        {
-            Id = TypeId.NewOAuthAccountId(),
-            UserId = user.Id,
-            Provider = OAuthProvider.Microsoft,
-            ProviderAccountId = info.Oid,
-        });
-        return user;
     }
 
     // Redirect the SPA to /auth/callback with a single fragment param. Always a fragment so

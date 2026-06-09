@@ -24,9 +24,10 @@ public static class ApiResponse
     public static ApiResponse<object> Error(string message) => new() { Success = false, Error = message };
 }
 
-public record AuthResponse(User User, string AccessToken, string RefreshToken, int ExpiresIn);
-
 public record RefreshTokenResponse(string AccessToken, int ExpiresIn);
 
 /// <summary>Body of GET /api/auth/me: the user plus OAuth group memberships (if any).</summary>
-public record MeResponse(User User, IReadOnlyList<string> Groups);
+public record MeResponse(AuthUserProfile User, IReadOnlyList<string> Groups);
+
+/// <summary>Public profile shape sent to the client, sourced entirely from the JWT claims.</summary>
+public record AuthUserProfile(string Id, string Email, string Name, string Role);

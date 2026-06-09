@@ -38,7 +38,8 @@ Set these in `.env.production` **on your VPS** for docker-compose:
 
 | Variable | Required | Description | Example |
 |----------|----------|-------------|---------|
-| `DATABASE_URL` | ✅ Yes | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/app_db` |
+| `JWT_SECRET` | ✅ Yes | Signs the access/refresh tokens (≥32 chars in prod) | `openssl rand -base64 32` |
+| `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` / `AZURE_REDIRECT_URI` | ⚠️ For SSO | Microsoft Entra ID OAuth (see below) | `...` |
 | `GITHUB_USER` | ✅ Yes | GitHub username (for pulling images) | `hbinduni` |
 | `VITE_API_URL` | ✅ Yes | **Client API endpoint (runtime!)** | `https://server.larahq.com` |
 | `NODE_ENV` | ⚠️ Optional | Node environment (defaults to `production`) | `production` |
@@ -62,9 +63,14 @@ ghcr.io/hbinduni/bun-hono-react-monorepo-server:latest
 
 #### `server/.env`
 ```bash
-DATABASE_URL=postgresql://user:password@localhost:5432/app_db
+ENVIRONMENT=development
 PORT=3000
-NODE_ENV=development
+JWT_SECRET=dev-secret-key-change-in-production
+# Microsoft Entra ID (optional — enables "Sign in with Microsoft")
+AZURE_TENANT_ID=
+AZURE_CLIENT_ID=
+AZURE_CLIENT_SECRET=
+AZURE_REDIRECT_URI=http://localhost:3000/api/auth/oauth/microsoft/callback
 ```
 
 #### `client/.env`
@@ -133,8 +139,8 @@ IMAGE_VERSION=latest
 | File | Location | Purpose | Contains |
 |------|----------|---------|----------|
 | `.env.build` | Local | Build-time config | `GITHUB_USER`, `GITHUB_TOKEN`, `VITE_API_URL` |
-| `.env.production` | VPS | Runtime config for docker-compose | `DATABASE_URL`, `GITHUB_USER`, ports, container names |
-| `server/.env` | Local | Server development | `DATABASE_URL`, `PORT`, `NODE_ENV` |
+| `.env.production` | VPS | Runtime config for docker-compose | `JWT_SECRET`, `AZURE_*`, `GITHUB_USER`, ports |
+| `server/.env` | Local | Server development | `JWT_SECRET`, `AZURE_*`, `PORT` |
 | `client/.env` | Local | Client development | `VITE_API_URL` |
 
 ## Quick Reference
@@ -147,7 +153,7 @@ make deploy
 
 **Deploying on VPS:**
 ```bash
-# .env.production contains GITHUB_USER, DATABASE_URL, etc.
+# .env.production contains GITHUB_USER, JWT_SECRET, AZURE_*, etc.
 docker compose --env-file .env.production pull
 docker compose --env-file .env.production up -d
 ```
