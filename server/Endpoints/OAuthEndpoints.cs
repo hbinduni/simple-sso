@@ -50,6 +50,7 @@ public static class OAuthEndpoints
         OAuthRepository oauth,
         SessionRepository sessions,
         JwtService jwt,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var txCookie = ctx.Request.Cookies[TxCookie];
@@ -73,29 +74,40 @@ public static class OAuthEndpoints
             return ToClient(config, "error", "token_exchange_failed");
         }
 
-        var user = await ResolveUserAsync(info, users, oauth);
-        if (user is null)
-            return ToClient(config, "error", "account_link_failed");
-
-        // Best-effort group lookup; carried in our JWT so /api/auth/me can surface it.
-        var groups = await ms.GetGroupNamesAsync(info.GraphAccessToken, ct);
-
-        var session = new Session
+        // Everything past the token exchange touches the database. Failures here (e.g. the DB
+        // being down) must still land the user on the SPA with a readable error rather than a
+        // raw 500 — but we log the real cause so it stays diagnosable server-side.
+        try
         {
-            Id = TypeId.NewSessionId(),
-            UserId = user.Id,
-            UserAgent = ctx.Request.Headers.UserAgent.FirstOrDefault(),
-            IpAddress = ClientIp.Get(ctx),
-            ExpiresAt = DateTime.UtcNow.Add(JwtService.RefreshTokenExpiry),
-        };
-        await sessions.CreateAsync(session);
+            var user = await ResolveUserAsync(info, users, oauth);
+            if (user is null)
+                return ToClient(config, "error", "account_link_failed");
 
-        var fragment =
-            $"accessToken={Uri.EscapeDataString(jwt.GenerateAccessToken(user, groups))}" +
-            $"&refreshToken={Uri.EscapeDataString(jwt.GenerateRefreshToken(user, groups))}" +
-            $"&expiresIn={(int)JwtService.AccessTokenExpiry.TotalSeconds}" +
-            $"&tokenType=Bearer";
-        return Results.Redirect($"{config.FrontendUrl.TrimEnd('/')}/auth/callback#{fragment}");
+            // Best-effort group lookup; carried in our JWT so /api/auth/me can surface it.
+            var groups = await ms.GetGroupNamesAsync(info.GraphAccessToken, ct);
+
+            var session = new Session
+            {
+                Id = TypeId.NewSessionId(),
+                UserId = user.Id,
+                UserAgent = ctx.Request.Headers.UserAgent.FirstOrDefault(),
+                IpAddress = ClientIp.Get(ctx),
+                ExpiresAt = DateTime.UtcNow.Add(JwtService.RefreshTokenExpiry),
+            };
+            await sessions.CreateAsync(session);
+
+            var fragment =
+                $"accessToken={Uri.EscapeDataString(jwt.GenerateAccessToken(user, groups))}" +
+                $"&refreshToken={Uri.EscapeDataString(jwt.GenerateRefreshToken(user, groups))}" +
+                $"&expiresIn={(int)JwtService.AccessTokenExpiry.TotalSeconds}" +
+                $"&tokenType=Bearer";
+            return Results.Redirect($"{config.FrontendUrl.TrimEnd('/')}/auth/callback#{fragment}");
+        }
+        catch (Exception ex)
+        {
+            loggerFactory.CreateLogger("OAuth.Microsoft").LogError(ex, "Microsoft OAuth callback failed");
+            return ToClient(config, "error", "server_error");
+        }
     }
 
     /// <summary>Find the user behind this Microsoft account, linking by verified email or

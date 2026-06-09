@@ -10,6 +10,7 @@ const ERROR_COPY: Record<string, string> = {
   token_exchange_failed: 'Microsoft rejected the sign-in. Please try again.',
   invalid_oauth_response: 'The sign-in response was incomplete. Please try again.',
   account_link_failed: 'Could not link your Microsoft account.',
+  server_error: 'Sign-in succeeded but the server could not complete it (is the database reachable?).',
 }
 
 function MicrosoftLogo() {
