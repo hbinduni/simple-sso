@@ -98,6 +98,6 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
-      # Uncomment if using private registry
-      # imagePullSecrets:
-      # - name: ghcr-secret
+      # Pull secret for the private GHCR images (create with: make k8s-create-image-pull-secret)
+      imagePullSecrets:
+      - name: ghcr-secret
