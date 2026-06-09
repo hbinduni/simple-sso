@@ -72,6 +72,33 @@ NODE_ENV=development
 VITE_API_URL=http://localhost:3000
 ```
 
+### 🔐 Microsoft Entra ID (Azure AD) OAuth — server only, optional
+
+Set these in `server/.env` (local) or the runtime secret (Docker/K8s). When **all four**
+are present the server mounts `GET /api/auth/oauth/microsoft` and its `/callback`; leave any
+blank to disable "Sign in with Microsoft" entirely.
+
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `AZURE_TENANT_ID` | ✅ (to enable) | Directory (tenant) ID of the app registration | `4b859b46-...` |
+| `AZURE_CLIENT_ID` | ✅ (to enable) | Application (client) ID | `3d94698a-...` |
+| `AZURE_CLIENT_SECRET` | ✅ (to enable) | Client secret value (**not** the secret ID) | `Hrt8Q~...` |
+| `AZURE_REDIRECT_URI` | ✅ (to enable) | Callback URL — must match the Entra app exactly | `http://localhost:3000/api/auth/oauth/microsoft/callback` |
+
+**Entra app registration setup:**
+1. Entra admin center → App registrations → your app.
+2. **Authentication** → Add a platform → **Web** → add the redirect URI above (use your real
+   API origin in production, e.g. `https://api.your-domain.com/api/auth/oauth/microsoft/callback`).
+3. **Certificates & secrets** → New client secret → copy the **Value** into `AZURE_CLIENT_SECRET`.
+4. API permissions: the default delegated `openid`, `profile`, `email` (Microsoft Graph) are enough.
+
+**Login flow:** the browser hits `GET /api/auth/oauth/microsoft` → Entra → `/callback`, then the
+server issues its own JWTs and redirects to `${FRONTEND_URL}/auth/callback#accessToken=...&refreshToken=...&expiresIn=...&tokenType=Bearer`.
+The SPA reads the URL fragment, stores the tokens, and strips them from history.
+
+> ⚠️ The client secret is a credential. Keep it only in `server/.env` (git-ignored) or your
+> K8s/Docker secret store, and rotate it if it is ever shared or exposed.
+
 ## Common Mistakes
 
 ### ✅ NEW: VITE_API_URL is now runtime configurable!

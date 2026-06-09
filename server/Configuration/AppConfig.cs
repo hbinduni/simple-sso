@@ -9,7 +9,18 @@ public sealed class AppConfig
     public required string FrontendUrl { get; init; }
     public required string JwtSecret { get; init; }
 
+    // Microsoft Entra ID (Azure AD) OAuth — all empty unless configured.
+    public required string AzureTenantId { get; init; }
+    public required string AzureClientId { get; init; }
+    public required string AzureClientSecret { get; init; }
+    public required string AzureRedirectUri { get; init; }
+
     public bool IsDevelopment => Environment == "development";
+
+    /// <summary>True only when every Entra ID setting is present; gates the OAuth endpoints.</summary>
+    public bool MicrosoftOAuthEnabled =>
+        AzureTenantId.Length > 0 && AzureClientId.Length > 0 &&
+        AzureClientSecret.Length > 0 && AzureRedirectUri.Length > 0;
 
     public string[] AllowedOrigins =>
     [
@@ -48,6 +59,10 @@ public sealed class AppConfig
             DatabaseUrl = Env("DATABASE_URL", ""),
             FrontendUrl = Env("FRONTEND_URL", "http://localhost:5173"),
             JwtSecret = jwtSecret,
+            AzureTenantId = Env("AZURE_TENANT_ID", ""),
+            AzureClientId = Env("AZURE_CLIENT_ID", ""),
+            AzureClientSecret = Env("AZURE_CLIENT_SECRET", ""),
+            AzureRedirectUri = Env("AZURE_REDIRECT_URI", ""),
         };
     }
 }

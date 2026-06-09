@@ -40,6 +40,9 @@ if (database is not null)
     builder.Services.AddScoped<SessionRepository>();
     builder.Services.AddScoped<ItemRepository>();
     builder.Services.AddScoped<OAuthRepository>();
+
+    if (config.MicrosoftOAuthEnabled)
+        builder.Services.AddHttpClient<MicrosoftOAuthService>();
 }
 else
 {
@@ -136,6 +139,9 @@ if (database is not null)
 {
     app.MapAuthEndpoints();
     app.MapItemEndpoints();
+
+    if (config.MicrosoftOAuthEnabled)
+        app.MapOAuthEndpoints();
 }
 else
 {

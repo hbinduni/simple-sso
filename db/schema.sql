@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS oauth_accounts (
   user_id VARCHAR(32) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 
   -- Provider info
-  provider VARCHAR(20) NOT NULL CHECK (provider IN ('google', 'facebook', 'twitter')),
+  provider VARCHAR(20) NOT NULL CHECK (provider IN ('google', 'facebook', 'twitter', 'microsoft')),
   provider_account_id VARCHAR(255) NOT NULL,
 
   -- Tokens (stored encrypted in production)

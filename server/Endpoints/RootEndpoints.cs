@@ -16,7 +16,7 @@ public static class RootEndpoints
             features = new
             {
                 authentication = "JWT (email/password)",
-                oauth = "Google, Facebook, Twitter",
+                oauth = "Google, Facebook, Twitter, Microsoft (Entra ID)",
                 ids = "TypeID (type-safe, K-sortable)",
                 roles = "admin, user, moderator",
             },
@@ -30,6 +30,8 @@ public static class RootEndpoints
                     logout = "POST /api/auth/logout",
                     me = "GET /api/auth/me",
                     sessions = "GET /api/auth/sessions",
+                    microsoft = "GET /api/auth/oauth/microsoft",
+                    microsoftCallback = "GET /api/auth/oauth/microsoft/callback",
                 },
                 items = new
                 {
