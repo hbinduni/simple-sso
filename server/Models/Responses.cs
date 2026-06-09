@@ -27,3 +27,6 @@ public static class ApiResponse
 public record AuthResponse(User User, string AccessToken, string RefreshToken, int ExpiresIn);
 
 public record RefreshTokenResponse(string AccessToken, int ExpiresIn);
+
+/// <summary>Body of GET /api/auth/me: the user plus OAuth group memberships (if any).</summary>
+public record MeResponse(User User, IReadOnlyList<string> Groups);

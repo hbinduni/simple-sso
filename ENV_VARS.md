@@ -90,7 +90,9 @@ blank to disable "Sign in with Microsoft" entirely.
 2. **Authentication** → Add a platform → **Web** → add the redirect URI above (use your real
    API origin in production, e.g. `https://api.your-domain.com/api/auth/oauth/microsoft/callback`).
 3. **Certificates & secrets** → New client secret → copy the **Value** into `AZURE_CLIENT_SECRET`.
-4. API permissions: the default delegated `openid`, `profile`, `email` (Microsoft Graph) are enough.
+4. **API permissions** → Microsoft Graph → Delegated → add `GroupMember.Read.All`, then
+   **Grant admin consent** (needs a tenant admin). This lets the sign-in read the user's group
+   display names for the profile. Without it, login still works but the Groups list is empty.
 
 **Login flow:** the browser hits `GET /api/auth/oauth/microsoft` → Entra → `/callback`, then the
 server issues its own JWTs and redirects to `${FRONTEND_URL}/auth/callback#accessToken=...&refreshToken=...&expiresIn=...&tokenType=Bearer`.

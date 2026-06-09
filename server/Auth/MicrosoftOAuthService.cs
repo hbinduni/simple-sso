@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -17,7 +18,12 @@ namespace Server.Auth;
 /// </summary>
 public sealed class MicrosoftOAuthService(HttpClient http, AppConfig config)
 {
-    private const string Scope = "openid profile email";
+    // GroupMember.Read.All lets the returned access token read the user's group memberships
+    // from Microsoft Graph (needs admin consent on the app registration).
+    private const string Scope = "openid profile email https://graph.microsoft.com/GroupMember.Read.All";
+
+    // Cap on group names carried in our JWT, to keep the token (and the redirect URL) bounded.
+    private const int MaxGroups = 100;
 
     private string Authority => $"https://login.microsoftonline.com/{config.AzureTenantId}";
 
@@ -71,6 +77,11 @@ public sealed class MicrosoftOAuthService(HttpClient http, AppConfig config)
             idTokenEl.GetString() is not { Length: > 0 } idToken)
             throw new InvalidOperationException("Entra token response had no id_token");
 
+        // Graph access token — used right away to read group memberships, never persisted.
+        var graphToken = json.RootElement.TryGetProperty("access_token", out var atEl)
+            ? atEl.GetString() ?? ""
+            : "";
+
         var jwt = new JsonWebToken(idToken);
 
         if (Claim(jwt, "aud") != config.AzureClientId)
@@ -88,7 +99,44 @@ public sealed class MicrosoftOAuthService(HttpClient http, AppConfig config)
             ?? throw new InvalidOperationException("id_token missing email/preferred_username claim");
         var name = Claim(jwt, "name") ?? email;
 
-        return new MicrosoftUser(oid, email, name);
+        return new MicrosoftUser(oid, email, name, graphToken);
+    }
+
+    /// <summary>Reads the user's group display names from Microsoft Graph. Returns an empty list
+    /// (never throws) if the token lacks consent or the call fails — group info is best-effort.</summary>
+    public async Task<IReadOnlyList<string>> GetGroupNamesAsync(string graphAccessToken, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(graphAccessToken))
+            return [];
+
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get,
+                "https://graph.microsoft.com/v1.0/me/memberOf/microsoft.graph.group?$select=displayName&$top=999");
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", graphAccessToken);
+
+            using var resp = await http.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode)
+                return [];
+
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
+            if (!doc.RootElement.TryGetProperty("value", out var values))
+                return [];
+
+            var names = new List<string>();
+            foreach (var group in values.EnumerateArray())
+            {
+                if (group.TryGetProperty("displayName", out var dn) && dn.GetString() is { Length: > 0 } name)
+                    names.Add(name);
+                if (names.Count >= MaxGroups)
+                    break;
+            }
+            return names;
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     private static string? Claim(JsonWebToken jwt, string key) =>
@@ -102,4 +150,4 @@ public sealed class MicrosoftOAuthService(HttpClient http, AppConfig config)
 
 public record AuthorizeRequest(string State, string Nonce, string Verifier, string Url);
 
-public record MicrosoftUser(string Oid, string Email, string Name);
+public record MicrosoftUser(string Oid, string Email, string Name, string GraphAccessToken);

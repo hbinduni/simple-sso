@@ -6,7 +6,7 @@
 
 export type UserRole = 'admin' | 'user' | 'moderator'
 
-export type OAuthProvider = 'google' | 'facebook' | 'twitter'
+export type OAuthProvider = 'google' | 'facebook' | 'twitter' | 'microsoft'
 
 export type AuthMethod = 'email' | 'oauth'
 
@@ -92,6 +92,12 @@ export interface RefreshTokenRequest {
 export interface RefreshTokenResponse {
   accessToken: string
   expiresIn: number // seconds
+}
+
+// GET /api/auth/me — the signed-in user plus their OAuth group memberships (display names).
+export interface MeResponse {
+  user: User
+  groups: string[]
 }
 
 export interface OAuthUrlResponse {

@@ -19,22 +19,30 @@ public sealed class JwtService
     public JwtService(string secret) =>
         _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
 
-    public string GenerateAccessToken(User user) => Generate(user, TokenType.Access, AccessTokenExpiry);
+    public string GenerateAccessToken(User user, IReadOnlyList<string>? groups = null) =>
+        Generate(user, TokenType.Access, AccessTokenExpiry, groups);
 
-    public string GenerateRefreshToken(User user) => Generate(user, TokenType.Refresh, RefreshTokenExpiry);
+    public string GenerateRefreshToken(User user, IReadOnlyList<string>? groups = null) =>
+        Generate(user, TokenType.Refresh, RefreshTokenExpiry, groups);
 
-    private string Generate(User user, TokenType type, TimeSpan expiry)
+    private string Generate(User user, TokenType type, TimeSpan expiry, IReadOnlyList<string>? groups)
     {
         var now = DateTime.UtcNow;
+        var claims = new Dictionary<string, object>
+        {
+            ["sub"] = user.Id,
+            ["email"] = user.Email,
+            ["role"] = user.Role.ToString().ToLowerInvariant(),
+            ["type"] = type.ToString().ToLowerInvariant(),
+        };
+        // OAuth group memberships (display names), captured at login and carried so the
+        // profile endpoint can surface them without re-querying the identity provider.
+        if (groups is { Count: > 0 })
+            claims["groups"] = groups;
+
         var descriptor = new SecurityTokenDescriptor
         {
-            Claims = new Dictionary<string, object>
-            {
-                ["sub"] = user.Id,
-                ["email"] = user.Email,
-                ["role"] = user.Role.ToString().ToLowerInvariant(),
-                ["type"] = type.ToString().ToLowerInvariant(),
-            },
+            Claims = claims,
             IssuedAt = now,
             Expires = now.Add(expiry),
             SigningCredentials = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256),
@@ -50,11 +58,13 @@ public sealed class JwtService
             return null;
 
         var jwt = (JsonWebToken)result.SecurityToken;
+        var groups = jwt.TryGetPayloadValue<string[]>("groups", out var g) ? g : [];
         return new JwtClaims(
             jwt.GetClaim("sub").Value,
             jwt.GetClaim("email").Value,
             jwt.GetClaim("role").Value,
-            jwt.GetClaim("type").Value);
+            jwt.GetClaim("type").Value,
+            groups);
     }
 
     public TokenValidationParameters ValidationParameters => new()
@@ -68,4 +78,4 @@ public sealed class JwtService
     };
 }
 
-public record JwtClaims(string UserId, string Email, string Role, string Type);
+public record JwtClaims(string UserId, string Email, string Role, string Type, IReadOnlyList<string> Groups);

@@ -1,4 +1,5 @@
 import {getItems} from '@client/api/items'
+import {AuthSection} from '@client/components/auth'
 import {config} from '@client/config'
 import type {Item} from '@client/types'
 import {formatDate} from '@client/utils'
@@ -94,6 +95,9 @@ export function Home() {
           </div>
         </div>
       </section>
+
+      {/* Microsoft Entra ID auth */}
+      <AuthSection />
 
       {/* Tech Stack */}
       <section className="max-w-6xl mx-auto px-6 pb-16">

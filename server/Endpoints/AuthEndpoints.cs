@@ -130,8 +130,10 @@ public static class AuthEndpoints
             return Results.Json(ApiResponse.Error("User not found"),
                 statusCode: StatusCodes.Status401Unauthorized);
 
+        // Carry the OAuth groups from the refresh token into the new access token so the
+        // profile keeps showing them after the short-lived access token rolls over.
         var response = new RefreshTokenResponse(
-            jwt.GenerateAccessToken(user),
+            jwt.GenerateAccessToken(user, claims.Groups),
             (int)JwtService.AccessTokenExpiry.TotalSeconds);
 
         return Results.Ok(ApiResponse.Ok(response));
@@ -152,7 +154,8 @@ public static class AuthEndpoints
             return Results.Json(ApiResponse.Error("User not found"),
                 statusCode: StatusCodes.Status404NotFound);
 
-        return Results.Ok(ApiResponse.Ok(user));
+        var groups = ctx.User.FindAll("groups").Select(c => c.Value).ToArray();
+        return Results.Ok(ApiResponse.Ok(new MeResponse(user, groups)));
     }
 
     private static async Task<IResult> GetSessions(HttpContext ctx, SessionRepository sessions)

@@ -77,6 +77,9 @@ public static class OAuthEndpoints
         if (user is null)
             return ToClient(config, "error", "account_link_failed");
 
+        // Best-effort group lookup; carried in our JWT so /api/auth/me can surface it.
+        var groups = await ms.GetGroupNamesAsync(info.GraphAccessToken, ct);
+
         var session = new Session
         {
             Id = TypeId.NewSessionId(),
@@ -88,8 +91,8 @@ public static class OAuthEndpoints
         await sessions.CreateAsync(session);
 
         var fragment =
-            $"accessToken={Uri.EscapeDataString(jwt.GenerateAccessToken(user))}" +
-            $"&refreshToken={Uri.EscapeDataString(jwt.GenerateRefreshToken(user))}" +
+            $"accessToken={Uri.EscapeDataString(jwt.GenerateAccessToken(user, groups))}" +
+            $"&refreshToken={Uri.EscapeDataString(jwt.GenerateRefreshToken(user, groups))}" +
             $"&expiresIn={(int)JwtService.AccessTokenExpiry.TotalSeconds}" +
             $"&tokenType=Bearer";
         return Results.Redirect($"{config.FrontendUrl.TrimEnd('/')}/auth/callback#{fragment}");
