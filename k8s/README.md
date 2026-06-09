@@ -99,7 +99,7 @@ If using private images from GitHub Container Registry:
 
 Update the image in deployment files:
 ```yaml
-image: ghcr.io/YOUR_GITHUB_USER/bun-hono-react-monorepo-server:latest
+image: ghcr.io/YOUR_GITHUB_USER/simple-sso-server:latest
 ```
 
 ## Makefile Commands
@@ -148,7 +148,7 @@ The client service is configured as `LoadBalancer` by default. On cloud provider
 
 ```bash
 # Get external IP
-kubectl get svc client-service -n bun-hono-react
+kubectl get svc client-service -n simple-sso
 ```
 
 ### NodePort (Local/Bare Metal)
@@ -184,25 +184,25 @@ Access: `http://<node-ip>:30080`
 
 ### Check Pod Status
 ```bash
-kubectl get pods -n bun-hono-react -w
+kubectl get pods -n simple-sso -w
 ```
 
 ### View Logs
 ```bash
 # Server logs
-kubectl logs -f deployment/server-deployment -n bun-hono-react
+kubectl logs -f deployment/server-deployment -n simple-sso
 
 # Client logs
-kubectl logs -f deployment/client-deployment -n bun-hono-react
+kubectl logs -f deployment/client-deployment -n simple-sso
 ```
 
 ### Execute Commands in Pod
 ```bash
 # Server
-kubectl exec -it deployment/server-deployment -n bun-hono-react -- /bin/sh
+kubectl exec -it deployment/server-deployment -n simple-sso -- /bin/sh
 
 # Client
-kubectl exec -it deployment/client-deployment -n bun-hono-react -- /bin/sh
+kubectl exec -it deployment/client-deployment -n simple-sso -- /bin/sh
 ```
 
 ## Troubleshooting
@@ -210,10 +210,10 @@ kubectl exec -it deployment/client-deployment -n bun-hono-react -- /bin/sh
 ### Pods not starting
 ```bash
 # Check pod events
-kubectl describe pod <pod-name> -n bun-hono-react
+kubectl describe pod <pod-name> -n simple-sso
 
 # Check logs
-kubectl logs <pod-name> -n bun-hono-react
+kubectl logs <pod-name> -n simple-sso
 ```
 
 ### ImagePullBackOff
@@ -229,10 +229,10 @@ kubectl logs <pod-name> -n bun-hono-react
 ### Service not accessible
 ```bash
 # Check service endpoints
-kubectl get endpoints -n bun-hono-react
+kubectl get endpoints -n simple-sso
 
 # Test from within cluster
-kubectl run test-pod --rm -it --image=curlimages/curl -n bun-hono-react -- sh
+kubectl run test-pod --rm -it --image=curlimages/curl -n simple-sso -- sh
 # Then: curl http://server-service:3000
 ```
 

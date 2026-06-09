@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: client-deployment
-  namespace: bun-hono-react
+  namespace: simple-sso
   labels:
     app: monorepo
     component: client
@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: client
-        image: ghcr.io/GITHUB_USER/bun-hono-react-monorepo-client:latest
+        image: ghcr.io/hbinduni/simple-sso-client:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80

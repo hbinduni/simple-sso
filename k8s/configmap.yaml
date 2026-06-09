@@ -2,13 +2,15 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: monorepo-config
-  namespace: bun-hono-react
+  namespace: simple-sso
   labels:
     app: monorepo
 data:
   # Server configuration
   ENVIRONMENT: "production"
   SERVER_PORT: "3000"
+  # Frontend origin — CORS allow-list + post-login redirect target
+  FRONTEND_URL: "https://sso.mstdev.my.id"
 
-  # Client configuration
-  VITE_API_URL: "http://server-service:3000"
+  # Client configuration — the SPA calls the backend at this absolute URL
+  VITE_API_URL: "https://sso-api.mstdev.my.id"

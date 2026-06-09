@@ -1,7 +1,7 @@
 services:
   # .NET Server
   server:
-    image: ${IMAGE_REGISTRY:-ghcr.io}/${GITHUB_USER}/${PROJECT_NAME:-bun-golang-react-monorepo}-server:${IMAGE_VERSION:-latest}
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${GITHUB_USER}/${PROJECT_NAME:-simple-sso}-server:${IMAGE_VERSION:-latest}
     container_name: ${SERVER_CONTAINER_NAME:-monorepo-server}
     restart: unless-stopped
     environment:
@@ -26,7 +26,7 @@ services:
 
   # React Client
   client:
-    image: ${IMAGE_REGISTRY:-ghcr.io}/${GITHUB_USER}/${PROJECT_NAME:-bun-hono-react-monorepo}-client:${IMAGE_VERSION:-latest}
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${GITHUB_USER}/${PROJECT_NAME:-simple-sso}-client:${IMAGE_VERSION:-latest}
     container_name: ${CLIENT_CONTAINER_NAME:-monorepo-client}
     restart: unless-stopped
     environment:

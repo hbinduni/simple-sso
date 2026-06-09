@@ -13,7 +13,7 @@ Set these **before building Docker images** (in `.env.build` or export manually)
 | `GITHUB_USER` | ✅ Yes | GitHub username for GHCR | `hbinduni` |
 | `GITHUB_TOKEN` | ✅ Yes | GitHub PAT for docker login | `ghp_xxxxx` |
 | `IMAGE_VERSION` | ⚠️ Optional | Image tag (defaults to `latest`) | `v1.0.0` |
-| `PROJECT_NAME` | ⚠️ Optional | Project name (defaults to repo name) | `bun-hono-react-monorepo` |
+| `PROJECT_NAME` | ⚠️ Optional | Project name (defaults to repo name) | `simple-sso` |
 
 **✨ Note:** `VITE_API_URL` is now a **runtime variable**! No need to set it at build time.
 
@@ -46,7 +46,7 @@ Set these in `.env.production` **on your VPS** for docker-compose:
 | `SERVER_PORT` | ⚠️ Optional | Server port (defaults to `3000`) | `3000` |
 | `CLIENT_PORT` | ⚠️ Optional | Client port (defaults to `80`) | `80` |
 | `IMAGE_REGISTRY` | ⚠️ Optional | Registry URL (defaults to `ghcr.io`) | `ghcr.io` |
-| `PROJECT_NAME` | ⚠️ Optional | Project name (defaults to repo name) | `bun-hono-react-monorepo` |
+| `PROJECT_NAME` | ⚠️ Optional | Project name (defaults to repo name) | `simple-sso` |
 | `IMAGE_VERSION` | ⚠️ Optional | Image version to pull (defaults to `latest`) | `latest` or `v1.0.0` |
 | `SERVER_CONTAINER_NAME` | ⚠️ Optional | Server container name | `monorepo-server` |
 | `CLIENT_CONTAINER_NAME` | ⚠️ Optional | Client container name | `monorepo-client` |
@@ -56,7 +56,7 @@ Set these in `.env.production` **on your VPS** for docker-compose:
 Docker Compose constructs the image path as:
 ```
 ${IMAGE_REGISTRY}/${GITHUB_USER}/${PROJECT_NAME}-server:${IMAGE_VERSION}
-ghcr.io/hbinduni/bun-hono-react-monorepo-server:latest
+ghcr.io/hbinduni/simple-sso-server:latest
 ```
 
 ### 💻 Development Variables (Local `.env` files)
@@ -130,7 +130,7 @@ docker compose --env-file .env.production up -d client
 ```bash
 # .env.production
 GITHUB_USER=hbinduni
-PROJECT_NAME=bun-hono-react-monorepo
+PROJECT_NAME=simple-sso
 IMAGE_VERSION=latest
 ```
 

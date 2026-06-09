@@ -1,31 +1,32 @@
+# Ingress for simple-sso on k3s (Traefik).
+#
+# HTTP (web) entrypoint only — TLS is terminated upstream by Cloudflare Tunnel.
+# Point your Cloudflare Tunnel at Traefik's HTTP NodePort and set the Host header:
+#   sso-api.mstdev.my.id  ->  http://<node>:<traefik-web-nodeport>   (Host: sso-api.mstdev.my.id)
+#   sso.mstdev.my.id      ->  http://<node>:<traefik-web-nodeport>   (Host: sso.mstdev.my.id)
+# (Find the NodePort: kubectl -n kube-system get svc traefik -o wide)
+#
+# Routing model — the SPA calls the backend at the ABSOLUTE URL https://sso-api.mstdev.my.id
+# (set via VITE_API_URL in the ConfigMap), so the two hosts are independent:
+#   sso-api.mstdev.my.id/  -> server-service (backend, port 3000)
+#   sso.mstdev.my.id/      -> client-service (SPA, port 80)
+#
+# Entra app registration must list this redirect URI (type Web):
+#   https://sso-api.mstdev.my.id/api/auth/oauth/microsoft/callback
+
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: monorepo-ingress
-  namespace: bun-hono-react
+  name: simple-sso-server-ingress
+  namespace: simple-sso
   labels:
     app: monorepo
+    component: server
   annotations:
-    # nginx.ingress.kubernetes.io/rewrite-target: /
-    # cert-manager.io/cluster-issuer: letsencrypt-prod
-    # kubernetes.io/ingress.class: nginx
+    traefik.ingress.kubernetes.io/router.entrypoints: web
 spec:
-  ingressClassName: nginx
   rules:
-  # Client routing
-  - host: your-domain.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: client-service
-            port:
-              number: 80
-
-  # API routing
-  - host: api.your-domain.com
+  - host: sso-api.mstdev.my.id
     http:
       paths:
       - path: /
@@ -36,9 +37,26 @@ spec:
             port:
               number: 3000
 
-  # TLS configuration (uncomment when ready to use HTTPS)
-  # tls:
-  # - hosts:
-  #   - your-domain.com
-  #   - api.your-domain.com
-  #   secretName: monorepo-tls-cert
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: simple-sso-client-ingress
+  namespace: simple-sso
+  labels:
+    app: monorepo
+    component: client
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+  - host: sso.mstdev.my.id
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: client-service
+            port:
+              number: 80

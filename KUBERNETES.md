@@ -133,7 +133,7 @@ make k8s-update-images
 Or manually edit `k8s/server-deployment.yaml` and `k8s/client-deployment.yaml`:
 
 ```yaml
-image: ghcr.io/YOUR_GITHUB_USER/bun-hono-react-monorepo-server:latest
+image: ghcr.io/YOUR_GITHUB_USER/simple-sso-server:latest
 ```
 
 ## Deployment
@@ -382,7 +382,7 @@ make k8s-events
 
 1. Verify image exists:
    ```bash
-   docker pull ghcr.io/YOUR_USER/bun-hono-react-monorepo-server:latest
+   docker pull ghcr.io/YOUR_USER/simple-sso-server:latest
    ```
 
 2. Create image pull secret if using private registry:
@@ -407,10 +407,10 @@ make k8s-events
 
 ```bash
 # Check service endpoints
-kubectl get endpoints -n bun-hono-react
+kubectl get endpoints -n simple-sso
 
 # Test from within cluster
-kubectl run test-pod --rm -it --image=curlimages/curl -n bun-hono-react -- sh
+kubectl run test-pod --rm -it --image=curlimages/curl -n simple-sso -- sh
 # Then: curl http://server-service:3000
 ```
 
@@ -418,7 +418,7 @@ kubectl run test-pod --rm -it --image=curlimages/curl -n bun-hono-react -- sh
 
 1. Verify the `AZURE_*` values are in the secret:
    ```bash
-   kubectl get secret monorepo-secret -n bun-hono-react -o yaml
+   kubectl get secret monorepo-secret -n simple-sso -o yaml
    ```
 
 2. Confirm `AZURE_REDIRECT_URI` matches the redirect URI registered on the Entra app exactly
