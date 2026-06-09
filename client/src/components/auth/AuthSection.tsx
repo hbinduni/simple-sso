@@ -1,4 +1,12 @@
-import {captureTokensFromUrl, clearTokens, getAccessToken, getMe, loginWithMicrosoft, logout} from '@client/api/auth'
+import {
+  captureTokensFromUrl,
+  clearTokens,
+  getAccessToken,
+  getMe,
+  loginWithMicrosoft,
+  logout,
+  signOutOfMicrosoft,
+} from '@client/api/auth'
 import type {MeResponse} from '@client/types'
 import {useEffect, useState} from 'react'
 
@@ -12,9 +20,6 @@ const ERROR_COPY: Record<string, string> = {
   account_link_failed: 'Could not link your Microsoft account.',
   server_error: 'Sign-in succeeded but the server could not complete it (is the database reachable?).',
 }
-
-// Marks (per browser tab) that a silent SSO was already attempted, to avoid a redirect loop.
-const SILENT_TRIED = 'sso_silent_tried'
 
 function MicrosoftLogo() {
   return (
@@ -47,46 +52,32 @@ export function AuthSection() {
   const [error, setError] = useState<string>()
 
   useEffect(() => {
-    const {error: cbError, ssoRequired} = captureTokensFromUrl()
+    const {error: cbError} = captureTokensFromUrl()
     if (cbError) {
       setError(ERROR_COPY[cbError] ?? `Sign-in failed: ${cbError}`)
       setStatus('error')
       return
     }
-    if (ssoRequired) {
-      // Silent SSO found no Entra session — show the landing page with the button.
-      sessionStorage.setItem(SILENT_TRIED, '1')
+    // Button-initiated login only — never auto-redirect to a login provider on page load
+    // (that pattern trips browser phishing/Safe Browsing heuristics on new domains).
+    if (!getAccessToken()) {
       setStatus('anon')
       return
     }
-    if (getAccessToken()) {
-      getMe()
-        .then((data) => {
-          sessionStorage.removeItem(SILENT_TRIED)
-          setMe(data)
-          setStatus('authed')
-        })
-        .catch(() => {
-          clearTokens()
-          setStatus('anon')
-        })
-      return
-    }
-    // No local session: try silent SSO once per tab. If the user already has an Entra session
-    // (e.g. signed into another app) they land signed in with no prompt; otherwise Entra returns
-    // login_required and we show the button. The flag prevents a redirect loop on reload.
-    if (sessionStorage.getItem(SILENT_TRIED)) {
-      setStatus('anon')
-      return
-    }
-    sessionStorage.setItem(SILENT_TRIED, '1')
-    loginWithMicrosoft(true)
+    getMe()
+      .then((data) => {
+        setMe(data)
+        setStatus('authed')
+      })
+      .catch(() => {
+        clearTokens()
+        setStatus('anon')
+      })
   }, [])
 
   async function handleLogout() {
     await logout()
-    setMe(null)
-    setStatus('anon')
+    signOutOfMicrosoft() // federated sign-out: ends the Entra session, then returns to the SPA
   }
 
   return (

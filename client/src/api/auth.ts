@@ -26,15 +26,14 @@ export function clearTokens(): void {
 
 /** Begin the Microsoft Entra ID login: a full-page redirect to the backend, which
  *  bounces through Entra and returns to {FRONTEND_URL}/auth/callback with the tokens.
- *  When silent=true, sends prompt=none — Entra signs the user in only if they already
- *  have a session, otherwise returns without prompting (ssoRequired below). */
-export function loginWithMicrosoft(silent = false): void {
-  window.location.href = `${API_BASE_URL}/api/auth/oauth/microsoft${silent ? '?silent=true' : ''}`
+ *  User-initiated (button) only — we intentionally don't auto-redirect on page load. */
+export function loginWithMicrosoft(): void {
+  window.location.href = `${API_BASE_URL}/api/auth/oauth/microsoft`
 }
 
 /** After the OAuth callback the tokens (or an error) arrive in the URL fragment. Persist
  *  them and scrub the URL so they never linger in history. Safe to call on every load. */
-export function captureTokensFromUrl(): {captured: boolean; error?: string; ssoRequired?: boolean} {
+export function captureTokensFromUrl(): {captured: boolean; error?: string} {
   const hash = window.location.hash.replace(/^#/, '')
   if (!hash) return {captured: false}
 
@@ -47,11 +46,6 @@ export function captureTokensFromUrl(): {captured: boolean; error?: string; ssoR
     saveTokens(access, refresh)
     history.replaceState(null, '', '/')
     return {captured: true}
-  }
-  // Silent SSO found no Entra session — not an error; the SPA should show the login button.
-  if (params.get('sso') === 'required') {
-    history.replaceState(null, '', '/')
-    return {captured: false, ssoRequired: true}
   }
   if (error) {
     history.replaceState(null, '', '/')
@@ -114,4 +108,10 @@ export async function logout(): Promise<void> {
     }).catch(() => {})
   }
   clearTokens()
+}
+
+/** Federated sign-out: end the Entra session too (so silent SSO won't immediately sign the
+ *  user back in), then Entra returns to the SPA. Call after clearing local tokens. */
+export function signOutOfMicrosoft(): void {
+  window.location.href = `${API_BASE_URL}/api/auth/oauth/microsoft/logout`
 }
