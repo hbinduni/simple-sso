@@ -30,9 +30,11 @@ public static class OAuthEndpoints
         group.MapGet("/callback", Callback);
     }
 
-    private static IResult Start(HttpContext ctx, MicrosoftOAuthService ms, AppConfig config)
+    // silent=true issues a prompt=none request: signs the user in only if they already have
+    // an Entra session, otherwise returns without prompting (see Callback's login_required handling).
+    private static IResult Start(HttpContext ctx, MicrosoftOAuthService ms, AppConfig config, bool silent = false)
     {
-        var req = ms.BuildAuthorizeRequest();
+        var req = ms.BuildAuthorizeRequest(silent);
         var tx = EncodeTx(new OAuthTx(req.State, req.Nonce, req.Verifier));
         ctx.Response.Cookies.Append(TxCookie, tx, CookieOpts(config));
         return Results.Redirect(req.Url);
@@ -54,7 +56,13 @@ public static class OAuthEndpoints
         ctx.Response.Cookies.Delete(TxCookie, CookieOpts(config));
 
         if (!string.IsNullOrEmpty(error))
+        {
+            // A silent (prompt=none) attempt with no usable Entra session isn't a real error —
+            // signal the SPA to fall back to the interactive login button.
+            if (error is "login_required" or "interaction_required" or "consent_required")
+                return ToClient(config, "sso", "required");
             return ToClient(config, "error", error_description ?? error);
+        }
         if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state) || txCookie is null)
             return ToClient(config, "error", "invalid_oauth_response");
 

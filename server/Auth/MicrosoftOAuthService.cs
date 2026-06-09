@@ -29,14 +29,14 @@ public sealed class MicrosoftOAuthService(HttpClient http, AppConfig config)
 
     /// <summary>Builds the /authorize redirect plus the CSRF state, OIDC nonce, and PKCE
     /// verifier the caller must stash (in a cookie) and hand back to <see cref="ExchangeCodeAsync"/>.</summary>
-    public AuthorizeRequest BuildAuthorizeRequest()
+    public AuthorizeRequest BuildAuthorizeRequest(bool silent = false)
     {
         var state = RandomToken();
         var nonce = RandomToken();
         var verifier = RandomToken();
         var challenge = Base64Url(SHA256.HashData(Encoding.ASCII.GetBytes(verifier)));
 
-        var url = QueryHelpers.AddQueryString($"{Authority}/oauth2/v2.0/authorize", new Dictionary<string, string?>
+        var query = new Dictionary<string, string?>
         {
             ["client_id"] = config.AzureClientId,
             ["response_type"] = "code",
@@ -47,8 +47,13 @@ public sealed class MicrosoftOAuthService(HttpClient http, AppConfig config)
             ["nonce"] = nonce,
             ["code_challenge"] = challenge,
             ["code_challenge_method"] = "S256",
-        });
+        };
+        // Silent SSO: authenticate only against an existing Entra session, never show UI.
+        // With no session, Entra returns error=login_required instead of a login page.
+        if (silent)
+            query["prompt"] = "none";
 
+        var url = QueryHelpers.AddQueryString($"{Authority}/oauth2/v2.0/authorize", query);
         return new AuthorizeRequest(state, nonce, verifier, url);
     }
 

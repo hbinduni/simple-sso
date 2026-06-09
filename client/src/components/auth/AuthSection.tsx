@@ -13,6 +13,9 @@ const ERROR_COPY: Record<string, string> = {
   server_error: 'Sign-in succeeded but the server could not complete it (is the database reachable?).',
 }
 
+// Marks (per browser tab) that a silent SSO was already attempted, to avoid a redirect loop.
+const SILENT_TRIED = 'sso_silent_tried'
+
 function MicrosoftLogo() {
   return (
     <svg width="16" height="16" viewBox="0 0 23 23" aria-hidden="true">
@@ -44,25 +47,40 @@ export function AuthSection() {
   const [error, setError] = useState<string>()
 
   useEffect(() => {
-    const {error: cbError} = captureTokensFromUrl()
+    const {error: cbError, ssoRequired} = captureTokensFromUrl()
     if (cbError) {
       setError(ERROR_COPY[cbError] ?? `Sign-in failed: ${cbError}`)
       setStatus('error')
       return
     }
-    if (!getAccessToken()) {
+    if (ssoRequired) {
+      // Silent SSO found no Entra session — show the landing page with the button.
+      sessionStorage.setItem(SILENT_TRIED, '1')
       setStatus('anon')
       return
     }
-    getMe()
-      .then((data) => {
-        setMe(data)
-        setStatus('authed')
-      })
-      .catch(() => {
-        clearTokens()
-        setStatus('anon')
-      })
+    if (getAccessToken()) {
+      getMe()
+        .then((data) => {
+          sessionStorage.removeItem(SILENT_TRIED)
+          setMe(data)
+          setStatus('authed')
+        })
+        .catch(() => {
+          clearTokens()
+          setStatus('anon')
+        })
+      return
+    }
+    // No local session: try silent SSO once per tab. If the user already has an Entra session
+    // (e.g. signed into another app) they land signed in with no prompt; otherwise Entra returns
+    // login_required and we show the button. The flag prevents a redirect loop on reload.
+    if (sessionStorage.getItem(SILENT_TRIED)) {
+      setStatus('anon')
+      return
+    }
+    sessionStorage.setItem(SILENT_TRIED, '1')
+    loginWithMicrosoft(true)
   }, [])
 
   async function handleLogout() {
@@ -86,7 +104,7 @@ export function AuthSection() {
             <p className="mb-5 text-xs text-white/35">Authenticate with your Microsoft Entra ID account</p>
             <button
               type="button"
-              onClick={loginWithMicrosoft}
+              onClick={() => loginWithMicrosoft()}
               className="inline-flex w-full items-center justify-center gap-2.5 rounded-lg border border-white/10 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 transition-colors hover:bg-white/90"
             >
               <MicrosoftLogo />
