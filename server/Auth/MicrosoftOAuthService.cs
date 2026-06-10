@@ -29,7 +29,7 @@ public sealed class MicrosoftOAuthService(HttpClient http, AppConfig config)
 
     /// <summary>Builds the /authorize redirect plus the CSRF state, OIDC nonce, and PKCE
     /// verifier the caller must stash (in a cookie) and hand back to <see cref="ExchangeCodeAsync"/>.</summary>
-    public AuthorizeRequest BuildAuthorizeRequest()
+    public AuthorizeRequest BuildAuthorizeRequest(string? loginHint = null)
     {
         var state = RandomToken();
         var nonce = RandomToken();
@@ -47,6 +47,9 @@ public sealed class MicrosoftOAuthService(HttpClient http, AppConfig config)
             ["nonce"] = nonce,
             ["code_challenge"] = challenge,
             ["code_challenge_method"] = "S256",
+            // Pre-selects the Entra account (an email/UPN, never a secret) so an existing tenant
+            // session signs the user in without an account picker. Null/oversized hints are dropped.
+            ["login_hint"] = loginHint?.Trim() is { Length: > 0 and <= 320 } hint ? hint : null,
         });
 
         return new AuthorizeRequest(state, nonce, verifier, url);

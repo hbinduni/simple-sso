@@ -26,9 +26,14 @@ export function clearTokens(): void {
 
 /** Begin the Microsoft Entra ID login: a full-page redirect to the backend, which
  *  bounces through Entra and returns to {FRONTEND_URL}/auth/callback with the tokens.
- *  User-initiated (button) only — we intentionally don't auto-redirect on page load. */
-export function loginWithMicrosoft(): void {
-  window.location.href = `${API_BASE_URL}/api/auth/oauth/microsoft`
+ *  User-initiated (button) only — we intentionally don't auto-redirect on page load.
+ *
+ *  `loginHint` (an email/UPN, not a secret) is forwarded to Entra to pre-select the account, so a
+ *  user arriving from another app on the same tenant signs in without the account picker. */
+export function loginWithMicrosoft(loginHint?: string): void {
+  const url = new URL(`${API_BASE_URL}/api/auth/oauth/microsoft`)
+  if (loginHint) url.searchParams.set('login_hint', loginHint)
+  window.location.href = url.toString()
 }
 
 /** After the OAuth callback the tokens (or an error) arrive in the URL fragment. Persist

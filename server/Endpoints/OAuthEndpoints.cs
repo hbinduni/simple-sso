@@ -32,9 +32,11 @@ public static class OAuthEndpoints
         group.MapGet("/logout", (MicrosoftOAuthService ms) => Results.Redirect(ms.LogoutUrl()));
     }
 
-    private static IResult Start(HttpContext ctx, MicrosoftOAuthService ms, AppConfig config)
+    private static IResult Start(HttpContext ctx, string? login_hint, MicrosoftOAuthService ms, AppConfig config)
     {
-        var req = ms.BuildAuthorizeRequest();
+        // login_hint (the user's email/UPN) lets a calling app on the same tenant deep-link here so
+        // an existing Entra session lands the user signed in without the account picker — not a credential.
+        var req = ms.BuildAuthorizeRequest(login_hint);
         var tx = EncodeTx(new OAuthTx(req.State, req.Nonce, req.Verifier));
         ctx.Response.Cookies.Append(TxCookie, tx, CookieOpts(config));
         return Results.Redirect(req.Url);

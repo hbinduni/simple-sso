@@ -50,6 +50,9 @@ export function AuthSection() {
   const [status, setStatus] = useState<Status>('loading')
   const [me, setMe] = useState<MeResponse | null>(null)
   const [error, setError] = useState<string>()
+  // A sibling app on the same Entra tenant can deep-link here with ?login_hint=<email> so the
+  // "Sign in" click pre-selects that account and skips the picker (the value is not a credential).
+  const [loginHint] = useState(() => new URLSearchParams(window.location.search).get('login_hint') ?? undefined)
 
   useEffect(() => {
     const {error: cbError} = captureTokensFromUrl()
@@ -95,7 +98,7 @@ export function AuthSection() {
             <p className="mb-5 text-xs text-white/35">Authenticate with your Microsoft Entra ID account</p>
             <button
               type="button"
-              onClick={() => loginWithMicrosoft()}
+              onClick={() => loginWithMicrosoft(loginHint)}
               className="inline-flex w-full items-center justify-center gap-2.5 rounded-lg border border-white/10 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 transition-colors hover:bg-white/90"
             >
               <MicrosoftLogo />
