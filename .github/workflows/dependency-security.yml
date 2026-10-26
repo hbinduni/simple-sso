@@ -1,0 +1,45 @@
+name: Dependency security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bun-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.4'
+      - name: Verify the committed dependency graph
+        run: bun --no-env-file install --frozen-lockfile --ignore-scripts
+      # Audit the committed dependency graph without executing package scripts.
+      - name: Audit production and development dependencies
+        run: bun --no-env-file audit
+
+  nuget-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Audit direct and transitive NuGet dependencies
+        run: >-
+          dotnet restore server/Server.csproj --force
+          -p:NuGetAudit=true -p:NuGetAuditMode=all -p:NuGetAuditLevel=low
+          -warnaserror:NU1900,NU1901,NU1902,NU1903,NU1904,NU1905
